@@ -1,6 +1,7 @@
 const User = require('../models/User');
 const Comic = require('../models/Comic');
 const Script = require('../models/Script');
+const File = require('../models/File');
 
 const getAuthorProfile = async (req, res) => {
   try {
@@ -22,7 +23,7 @@ const updateMyProfile = async (req, res) => {
     const update = {};
     if (name) update.name = name;
     if (bio !== undefined) update.bio = bio;
-    if (req.file) update.avatarUrl = `/uploads/avatars/${req.file.filename}`;
+    if (req.file) update.avatarUrl = `/uploads/avatars/${await File.saveUpload(req.file, 'avatars')}`;
 
     const user = await User.findByIdAndUpdate(req.user._id, update, { new: true }).select('-password');
     res.json(user);

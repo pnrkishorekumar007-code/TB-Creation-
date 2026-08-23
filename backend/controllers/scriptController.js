@@ -1,4 +1,5 @@
 const Script = require('../models/Script');
+const File = require('../models/File');
 
 const createScript = async (req, res) => {
   try {
@@ -6,11 +7,12 @@ const createScript = async (req, res) => {
     if (!title) return res.status(400).json({ message: 'Title is required' });
     if (!req.file) return res.status(400).json({ message: 'Script file is required' });
 
+    const filename = await File.saveUpload(req.file, 'scripts');
     const script = await Script.create({
       title,
       synopsis,
       genre,
-      fileUrl: `/uploads/scripts/${req.file.filename}`,
+      fileUrl: `/uploads/scripts/${filename}`,
       author: req.user._id,
       approvalStatus: publish === 'true' ? 'pending' : 'draft',
     });

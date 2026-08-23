@@ -1,10 +1,10 @@
-require('dotenv').config();
+require('dotenv').config({ path: require('path').join(__dirname, '.env') });
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
-const path = require('path');
 const connectDB = require('./config/db');
+const File = require('./models/File');
 
 const authRoutes = require('./routes/authRoutes');
 const comicRoutes = require('./routes/comicRoutes');
@@ -26,10 +26,26 @@ connectDB();
 
 const app = express();
 
+// Behind Vercel/other proxies, express-rate-limit needs this to see real client IPs.
+app.set('trust proxy', 1);
+
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 app.use(cors({ origin: process.env.CLIENT_URL || '*' }));
 app.use(express.json());
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// Uploaded files live in MongoDB (serverless filesystems are ephemeral),
+// so /uploads/* is served from the database instead of disk.
+app.get('/uploads/:folder/:filename', async (req, res) => {
+  try {
+    const file = await File.findOne({ path: `${req.params.folder}/${req.params.filename}` });
+    if (!file) return res.status(404).json({ message: 'File not found' });
+    res.set('Content-Type', file.contentType);
+    res.set('Cache-Control', 'public, max-age=31536000, immutable');
+    res.send(file.data);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
 
 // General API limiter — generous, just stops runaway scripts/bots.
 const generalLimiter = rateLimit({
@@ -85,5 +101,11 @@ app.use((err, req, res, next) => {
   next();
 });
 
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+// Exported for Vercel serverless functions (api/index.js); listens only
+// when started directly with `node server.js` / `npm run dev`.
+module.exports = app;
+
+if (require.main === module) {
+  const PORT = process.env.PORT || 5000;
+  app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+}

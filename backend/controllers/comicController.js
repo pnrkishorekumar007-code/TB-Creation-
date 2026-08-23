@@ -2,13 +2,14 @@ const Comic = require('../models/Comic');
 const Chapter = require('../models/Chapter');
 const Follow = require('../models/Follow');
 const Notification = require('../models/Notification');
+const File = require('../models/File');
 
 const createComic = async (req, res) => {
   try {
     const { title, description, genre, tags, status, publish } = req.body;
     if (!title) return res.status(400).json({ message: 'Title is required' });
 
-    const coverUrl = req.file ? `/uploads/covers/${req.file.filename}` : '';
+    const coverUrl = req.file ? `/uploads/covers/${await File.saveUpload(req.file, 'covers')}` : '';
 
     const comic = await Comic.create({
       title,
@@ -116,7 +117,11 @@ const addChapter = async (req, res) => {
       return res.status(403).json({ message: 'Not your comic' });
     }
 
-    const pageImages = (req.files || []).map((f) => `/uploads/pages/${f.filename}`);
+    const pageFilenames = [];
+    for (const f of req.files || []) {
+      pageFilenames.push(await File.saveUpload(f, 'pages'));
+    }
+    const pageImages = pageFilenames.map((name) => `/uploads/pages/${name}`);
     if (pageImages.length === 0) {
       return res.status(400).json({ message: 'At least one page image is required' });
     }

@@ -4,7 +4,13 @@ import HeroActions from '../components/HeroActions';
 
 async function getComics() {
   try {
-    const base = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+    // NEXT_PUBLIC_API_URL may be same-origin relative (e.g. "/api" on Vercel),
+    // but server-side fetch() needs an absolute URL.
+    let base = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+    if (base.startsWith('/')) {
+      const host = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000';
+      base = `${host}${base}`;
+    }
     const res = await fetch(`${base}/comics?sort=popular&limit=6`, { cache: 'no-store' });
     if (!res.ok) return [];
     const data = await res.json();
