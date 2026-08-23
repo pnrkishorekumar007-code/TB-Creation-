@@ -21,11 +21,13 @@ const updateMyProfile = async (req, res) => {
   try {
     const { name, bio } = req.body;
     const update = {};
-    if (name) update.name = name;
+    if (name && name.trim()) update.name = name.trim();
     if (bio !== undefined) update.bio = bio;
     if (req.file) update.avatarUrl = `/uploads/avatars/${await File.saveUpload(req.file, 'avatars')}`;
 
-    const user = await User.findByIdAndUpdate(req.user._id, update, { new: true }).select('-password');
+    const user = await User.findByIdAndUpdate(req.user._id, update, { new: true }).select(
+      '-password -resetPasswordToken -resetPasswordExpires'
+    );
     res.json(user);
   } catch (err) {
     res.status(500).json({ message: err.message });

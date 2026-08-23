@@ -44,7 +44,9 @@ export default function SignupPage() {
         <input
           required
           type="password"
-          placeholder="Password"
+          placeholder="Password (min 6 characters)"
+          minLength={6}
+          autoComplete="new-password"
           value={form.password}
           onChange={(e) => setForm({ ...form, password: e.target.value })}
           className="bg-panel panel-border rounded px-4 py-3 text-sm outline-none focus:border-accent"

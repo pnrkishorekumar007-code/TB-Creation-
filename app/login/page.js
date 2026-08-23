@@ -40,6 +40,7 @@ export default function LoginPage() {
           placeholder="Password"
           value={form.password}
           onChange={(e) => setForm({ ...form, password: e.target.value })}
+          autoComplete="current-password"
           className="bg-panel panel-border rounded px-4 py-3 text-sm outline-none focus:border-accent"
         />
         {error && <p className="text-sm text-accent">{error}</p>}

@@ -1,19 +1,28 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../lib/AuthContext';
 import api from '../../lib/api';
 
 export default function ProfilePage() {
-  const { user, loading } = useAuth();
+  const { user, loading, updateUser } = useAuth();
   const router = useRouter();
-  const [name, setName] = useState(user?.name || '');
+  const [name, setName] = useState('');
   const [bio, setBio] = useState('');
   const [avatar, setAvatar] = useState(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState('');
+
+  // Form state must sync once auth finishes loading — useState's initial
+  // value runs while `user` is still null, leaving the fields empty.
+  useEffect(() => {
+    if (user) {
+      setName(user.name || '');
+      setBio(user.bio || '');
+    }
+  }, [user]);
 
   if (loading) return null;
   if (!user) {
@@ -40,9 +49,10 @@ export default function ProfilePage() {
       data.append('bio', bio);
       if (avatar) data.append('avatar', avatar);
 
-      await api.put('/authors/me', data, {
+      const res = await api.put('/authors/me', data, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
+      updateUser({ name: res.data.name, bio: res.data.bio, avatarUrl: res.data.avatarUrl });
       setSaved(true);
     } catch (err) {
       setError(err.response?.data?.message || 'Could not save changes');

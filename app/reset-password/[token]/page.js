@@ -49,7 +49,9 @@ export default function ResetPasswordPage() {
         <input
           required
           type="password"
-          placeholder="New password"
+          placeholder="New password (min 6 characters)"
+          minLength={6}
+          autoComplete="new-password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           className="bg-panel panel-border rounded px-4 py-3 text-sm outline-none focus:border-accent"

@@ -6,10 +6,22 @@ const User = require('../models/User');
 const signToken = (id) =>
   jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '30d' });
 
+// Single source of truth for the user shape sent to the client —
+// matches what /auth/me returns so the UI never sees two different shapes.
+const sanitizeUser = (user) => ({
+  id: user._id,
+  _id: user._id,
+  name: user.name,
+  email: user.email,
+  role: user.role,
+  bio: user.bio || '',
+  avatarUrl: user.avatarUrl || '',
+});
+
 const signup = async (req, res) => {
   try {
     const { name, email, password, role } = req.body;
-    if (!name || !email || !password) {
+    if (!name || !name.trim() || !email || !password) {
       return res.status(400).json({ message: 'Name, email, and password are required' });
     }
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -26,14 +38,21 @@ const signup = async (req, res) => {
     const hashed = await bcrypt.hash(password, 10);
     const allowedRole = role === 'author' ? 'author' : 'reader';
 
-    const user = await User.create({ name, email: email.toLowerCase(), password: hashed, role: allowedRole });
+    const user = await User.create({
+      name: name.trim(),
+      email: email.toLowerCase(),
+      password: hashed,
+      role: allowedRole,
+    });
     const token = signToken(user._id);
 
-    res.status(201).json({
-      token,
-      user: { id: user._id, name: user.name, email: user.email, role: user.role },
-    });
+    res.status(201).json({ token, user: sanitizeUser(user) });
   } catch (err) {
+    // Two simultaneous signups with the same email race past the findOne
+    // check above; the unique index catches them here.
+    if (err.code === 11000) {
+      return res.status(400).json({ message: 'Email already in use' });
+    }
     res.status(500).json({ message: err.message });
   }
 };
@@ -52,17 +71,14 @@ const login = async (req, res) => {
     if (!match) return res.status(401).json({ message: 'Invalid credentials' });
 
     const token = signToken(user._id);
-    res.json({
-      token,
-      user: { id: user._id, name: user.name, email: user.email, role: user.role },
-    });
+    res.json({ token, user: sanitizeUser(user) });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
 
 const me = async (req, res) => {
-  res.json({ user: req.user });
+  res.json({ user: sanitizeUser(req.user) });
 };
 
 const forgotPassword = async (req, res) => {

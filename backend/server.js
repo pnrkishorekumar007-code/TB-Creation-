@@ -30,7 +30,11 @@ const app = express();
 app.set('trust proxy', 1);
 
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
-app.use(cors({ origin: process.env.CLIENT_URL || '*' }));
+// Reflect any origin: the frontend calls this API same-origin (/api rewrite),
+// and a hardcoded CLIENT_URL that drifts from the real domain would block
+// even same-origin calls (browsers attach Origin to POST requests).
+// Safe because auth uses Bearer tokens, never cookies.
+app.use(cors({ origin: true }));
 app.use(express.json());
 
 // Uploaded files live in MongoDB (serverless filesystems are ephemeral),
