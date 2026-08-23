@@ -32,6 +32,9 @@ const getOpenReports = async (req, res) => {
 const resolveReport = async (req, res) => {
   try {
     const { status } = req.body; // 'reviewed' | 'dismissed'
+    if (!['reviewed', 'dismissed'].includes(status)) {
+      return res.status(400).json({ message: "status must be 'reviewed' or 'dismissed'" });
+    }
     const report = await Report.findByIdAndUpdate(req.params.id, { status }, { new: true });
     if (!report) return res.status(404).json({ message: 'Report not found' });
     res.json(report);

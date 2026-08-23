@@ -26,6 +26,9 @@ const toggleLike = async (req, res) => {
 const getLikeStatus = async (req, res) => {
   try {
     const { comicId, scriptId } = req.query;
+    if (!comicId && !scriptId) {
+      return res.status(400).json({ message: 'comicId or scriptId is required' });
+    }
     const countFilter = comicId ? { comic: comicId } : { script: scriptId };
     const count = await Like.countDocuments(countFilter);
 

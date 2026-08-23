@@ -71,8 +71,16 @@ const getScriptById = async (req, res) => {
     const script = await Script.findById(req.params.id).populate('author', 'name bio avatarUrl');
     if (!script) return res.status(404).json({ message: 'Script not found' });
 
-    script.views += 1;
-    await script.save();
+    // Unpublished drafts/pending/rejected scripts are only visible to their
+    // author or an admin — don't leak them via direct IDs.
+    const authorId = script.author?._id || script.author;
+    const isOwnerOrAdmin =
+      req.user && (String(authorId) === String(req.user._id) || req.user.role === 'admin');
+    if (script.approvalStatus !== 'approved' && !isOwnerOrAdmin) {
+      return res.status(404).json({ message: 'Script not found' });
+    }
+
+    await Script.updateOne({ _id: script._id }, { $inc: { views: 1 } });
 
     res.json(script);
   } catch (err) {

@@ -80,8 +80,16 @@ const getComicById = async (req, res) => {
     const comic = await Comic.findById(req.params.id).populate('author', 'name bio avatarUrl');
     if (!comic) return res.status(404).json({ message: 'Comic not found' });
 
-    comic.views += 1;
-    await comic.save();
+    // Unpublished drafts/pending/rejected comics are only visible to their
+    // author or an admin — don't leak them via direct IDs.
+    const authorId = comic.author?._id || comic.author;
+    const isOwnerOrAdmin =
+      req.user && (String(authorId) === String(req.user._id) || req.user.role === 'admin');
+    if (comic.approvalStatus !== 'approved' && !isOwnerOrAdmin) {
+      return res.status(404).json({ message: 'Comic not found' });
+    }
+
+    await Comic.updateOne({ _id: comic._id }, { $inc: { views: 1 } });
 
     const chapters = await Chapter.find({ comic: comic._id, publishAt: { $lte: new Date() } }).sort({ order: 1 });
 
@@ -117,6 +125,16 @@ const addChapter = async (req, res) => {
       return res.status(403).json({ message: 'Not your comic' });
     }
 
+    const { title, order, publishAt } = req.body;
+    if (!title) return res.status(400).json({ message: 'Chapter title is required' });
+
+    const publishDate = publishAt ? new Date(publishAt) : new Date();
+    if (Number.isNaN(publishDate.getTime())) {
+      return res.status(400).json({ message: 'publishAt must be a valid date' });
+    }
+
+    // Persist files only after all validation passes, so bad requests
+    // don't leave orphaned uploads in the database.
     const pageFilenames = [];
     for (const f of req.files || []) {
       pageFilenames.push(await File.saveUpload(f, 'pages'));
@@ -126,19 +144,16 @@ const addChapter = async (req, res) => {
       return res.status(400).json({ message: 'At least one page image is required' });
     }
 
-    const { title, order, publishAt } = req.body;
-    if (!title) return res.status(400).json({ message: 'Chapter title is required' });
-
     const chapter = await Chapter.create({
       comic: comic._id,
       title,
       order: Number(order) || 1,
       pageImages,
-      publishAt: publishAt ? new Date(publishAt) : new Date(),
+      publishAt: publishDate,
     });
 
     // Notify followers only if the chapter is publishing immediately
-    if (!publishAt || new Date(publishAt) <= new Date()) {
+    if (!publishAt || publishDate <= new Date()) {
       const followers = await Follow.find({ author: comic.author });
       if (followers.length > 0) {
         await Notification.insertMany(

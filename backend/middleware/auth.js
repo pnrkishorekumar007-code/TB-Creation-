@@ -15,7 +15,7 @@ const protect = async (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = await User.findById(decoded.id).select('-password');
+    req.user = await User.findById(decoded.id).select('-password -resetPasswordToken -resetPasswordExpires');
     if (!req.user) {
       return res.status(401).json({ message: 'User no longer exists' });
     }
@@ -37,7 +37,7 @@ const optionalAuth = async (req, res, next) => {
   if (authHeader && authHeader.startsWith('Bearer ')) {
     try {
       const decoded = jwt.verify(authHeader.split(' ')[1], process.env.JWT_SECRET);
-      req.user = await User.findById(decoded.id).select('-password');
+      req.user = await User.findById(decoded.id).select('-password -resetPasswordToken -resetPasswordExpires');
     } catch {
       req.user = null;
     }
