@@ -5,8 +5,12 @@ const connectDB = async () => {
     await mongoose.connect(process.env.MONGO_URI);
     console.log('MongoDB connected');
   } catch (err) {
+    // In serverless (Vercel) we must NOT process.exit — it kills the whole
+    // function and returns an empty 500 with no error details.
     console.error('MongoDB connection error:', err.message);
-    process.exit(1);
+    if (process.env.NODE_ENV !== 'production' && process.env.VERCEL !== '1') {
+      process.exit(1);
+    }
   }
 };
 
