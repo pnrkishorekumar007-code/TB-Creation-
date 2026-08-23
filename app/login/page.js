@@ -18,7 +18,7 @@ export default function LoginPage() {
       await login(form.email, form.password);
       router.push('/');
     } catch (err) {
-      setError(err.response?.data?.message || 'Login failed');
+      setError(err.response?.data?.message || err.message || 'Login failed');
     }
   };
 

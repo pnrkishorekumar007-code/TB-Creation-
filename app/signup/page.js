@@ -18,7 +18,7 @@ export default function SignupPage() {
       await signup(form.name, form.email, form.password, form.role);
       router.push('/');
     } catch (err) {
-      setError(err.response?.data?.message || 'Signup failed');
+      setError(err.response?.data?.message || err.message || 'Signup failed');
     }
   };
 
