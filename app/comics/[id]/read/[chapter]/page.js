@@ -6,7 +6,7 @@ import { useParams } from 'next/navigation';
 import api from '../../../../../lib/api';
 import { useAuth } from '../../../../../lib/AuthContext';
 
-const API_BASE = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api').replace('/api', '');
+const API_BASE = (process.env.NEXT_PUBLIC_API_URL || '/api').replace('/api', '');
 
 export default function ReaderPage() {
   const { id, chapter } = useParams();

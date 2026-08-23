@@ -10,7 +10,7 @@ import CommentSection from '../../../components/CommentSection';
 import LikeButton from '../../../components/LikeButton';
 import RatingStars from '../../../components/RatingStars';
 
-const API_BASE = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api').replace('/api', '');
+const API_BASE = (process.env.NEXT_PUBLIC_API_URL || '/api').replace('/api', '');
 
 export default function ComicDetailPage() {
   const { id } = useParams();

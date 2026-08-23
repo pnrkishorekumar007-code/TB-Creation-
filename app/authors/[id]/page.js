@@ -7,7 +7,7 @@ import ComicCard from '../../../components/ComicCard';
 import ScriptCard from '../../../components/ScriptCard';
 import FollowButton from '../../../components/FollowButton';
 
-const API_BASE = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api').replace('/api', '');
+const API_BASE = (process.env.NEXT_PUBLIC_API_URL || '/api').replace('/api', '');
 
 export default function AuthorProfilePage() {
   const { id } = useParams();

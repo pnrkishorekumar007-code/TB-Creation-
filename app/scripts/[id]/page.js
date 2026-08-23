@@ -8,7 +8,7 @@ import BookmarkButton from '../../../components/BookmarkButton';
 import FollowButton from '../../../components/FollowButton';
 import LikeButton from '../../../components/LikeButton';
 
-const API_BASE = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api').replace('/api', '');
+const API_BASE = (process.env.NEXT_PUBLIC_API_URL || '/api').replace('/api', '');
 
 export default function ScriptDetailPage() {
   const { id } = useParams();

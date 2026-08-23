@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useAuth } from '../lib/AuthContext';
 import NotificationBell from './NotificationBell';
 
-const API_BASE = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api').replace('/api', '');
+const API_BASE = (process.env.NEXT_PUBLIC_API_URL || '/api').replace('/api', '');
 
 export default function Navbar() {
   const { user, logout } = useAuth();

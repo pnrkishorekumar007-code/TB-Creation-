@@ -9,7 +9,7 @@ export default function ComicCard({ comic }) {
         {isHot && <span className="ribbon">🔥 Hot</span>}
         {comic.coverUrl ? (
           <img
-            src={`${process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5000'}${comic.coverUrl}`}
+            src={`${(process.env.NEXT_PUBLIC_API_URL || '/api')?.replace('/api', '')}${comic.coverUrl}`}
             alt={comic.title}
             className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
           />
