@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+
+# Next.js build & cache
+frontend/.next/
+frontend/out/
+
+# Environment / secrets — never commit
+.env
+.env.local
+!.env.example
+!.env.local.example
+
+# Uploaded media (dev: stored on local disk)
+backend/uploads/*
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
