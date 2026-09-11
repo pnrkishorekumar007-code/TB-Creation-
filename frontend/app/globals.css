@@ -1,0 +1,116 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body {
+  background-color: #0A0A0D;
+  color: #F5F3ED;
+}
+
+.panel-border {
+  border: 1px solid rgba(245, 243, 237, 0.08);
+}
+
+.ink-card {
+  background-color: #16161B;
+  border: 1px solid rgba(245, 243, 237, 0.08);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+  transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+}
+
+.ink-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(255, 59, 78, 0.5);
+  box-shadow: 0 0 0 1px rgba(255,59,78,0.35), 0 12px 30px rgba(255,59,78,0.12);
+}
+
+.speed-line {
+  background: repeating-linear-gradient(
+    90deg,
+    rgba(245,243,237,0.05) 0px,
+    rgba(245,243,237,0.05) 2px,
+    transparent 2px,
+    transparent 16px
+  );
+}
+
+.glow-btn {
+  box-shadow: 0 4px 24px rgba(255,59,78,0.35);
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+.glow-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px rgba(255,59,78,0.5);
+}
+
+.outline-btn {
+  transition: border-color .15s ease, background-color .15s ease, transform .15s ease;
+}
+.outline-btn:hover {
+  transform: translateY(-2px);
+}
+
+.gradient-text {
+  background: linear-gradient(90deg, #FF3B4E, #FF7A59);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.hero-glow {
+  position: absolute;
+  width: 700px;
+  height: 700px;
+  background: radial-gradient(circle, rgba(255,59,78,0.22) 0%, transparent 70%);
+  filter: blur(10px);
+  pointer-events: none;
+}
+
+.badge-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(245,243,237,0.05);
+  border: 1px solid rgba(245,243,237,0.1);
+  color: #8E8E97;
+  font-size: 12px;
+  padding: 6px 12px;
+  border-radius: 999px;
+}
+
+.stat-strip {
+  display: flex;
+  gap: 28px;
+  flex-wrap: wrap;
+}
+.stat-strip .stat-num {
+  font-family: var(--font-display);
+  font-size: 22px;
+  color: #F5F3ED;
+  letter-spacing: 0.5px;
+}
+.stat-strip .stat-label {
+  font-size: 12px;
+  color: #8E8E97;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.ribbon {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  background: #FF3B4E;
+  color: #0A0A0D;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  padding: 3px 8px;
+  border-radius: 3px;
+  text-transform: uppercase;
+}
+
+::selection {
+  background: #FF3B4E;
+  color: #0A0A0D;
+}

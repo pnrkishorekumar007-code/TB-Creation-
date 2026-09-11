@@ -9,7 +9,11 @@ A full-stack manga/comic publishing platform. Authors upload manga scripts and c
 - **File storage:** Local disk via Multer (swap for Cloudinary/S3 later if you want cloud storage)
 - **Auth:** JWT, roles: reader / author / admin
 
-## Features included (v1 + v2 + v3 + v4 + v5)
+## Features included (v1 + v2 + v3 + v4 + v5 + v6)
+- **Mobile navigation** — a proper hamburger menu on small screens (the nav links used to just disappear below the `md` breakpoint with no way to reach them — now fixed)
+- **Report modal** — reporting a comic or comment now opens a styled in-theme modal instead of the browser's native `prompt()`/`alert()` popups
+- **Branded cover placeholders** — comics without a cover image show a styled gradient card with the title instead of plain "No cover" text
+- **Loading and error states** — a themed spinner while pages load, and a styled error screen with a "Try Again" button instead of Next.js's default blank error page
 - Signup/login with role selection (reader or author), with real email/password validation
 - **Password reset** — forgot-password flow with a time-limited, hashed reset token (1 hour expiry)
 - **Security hardening** — Helmet security headers, rate limiting on all API routes (300/15min) and a tighter limit on auth routes specifically (20/15min) to slow down brute-force attempts
@@ -52,8 +56,9 @@ Runs on `http://localhost:5000`.
 
 You need MongoDB running — either install it locally, or create a free cluster at MongoDB Atlas and paste its connection string into `MONGO_URI`.
 
-### 2. Frontend (repo root)
+### 2. Frontend
 ```bash
+cd frontend
 npm install
 cp .env.local.example .env.local
 npm run dev
@@ -66,31 +71,18 @@ There's no signup option for admin (by design — admins shouldn't self-register
 ## Project Structure
 ```
 tb-creation/
-├── api/                 # Vercel serverless entry (wraps backend/server.js)
-├── app/                 # Next.js App Router pages (frontend lives at the repo root)
-├── components/          # Navbar, Footer, ComicCard, ScriptCard, etc.
-├── lib/                 # api.js (axios client), AuthContext.js
-└── backend/
-    ├── models/          # User, Comic, Chapter, Script, File (uploaded binaries), ...
-    ├── routes/          # auth, comics, scripts, authors, contact, admin, ...
-    ├── controllers/
-    ├── middleware/      # auth.js (JWT + roles), upload.js (multer, memory storage)
-    └── server.js        # Express app; also exported for Vercel functions
+├── backend/
+│   ├── models/        # User, Comic, Chapter, Script, ContactMessage
+│   ├── routes/        # auth, comics, scripts, authors, contact, admin
+│   ├── controllers/
+│   ├── middleware/     # auth.js (JWT + roles), upload.js (multer)
+│   ├── uploads/         # uploaded files served at /uploads/*
+│   └── server.js
+└── frontend/
+    ├── app/            # Next.js App Router pages
+    ├── components/     # Navbar, Footer, ComicCard, ScriptCard
+    └── lib/             # api.js (axios client), AuthContext.js
 ```
-
-## Deploying to Vercel
-
-The repo deploys as a **single Vercel project**: Next.js builds from the root, and the Express API runs as a serverless function (`api/index.js` wraps `backend/server.js`). `vercel.json` routes `/api/*` and `/uploads/*` to it. Uploaded files are stored in MongoDB (`File` model), so they persist — serverless filesystems are ephemeral.
-
-1. Import the GitHub repo on Vercel (Next.js is auto-detected at the root).
-2. Set environment variables:
-   - `MONGO_URI` — MongoDB Atlas connection string (**required**; local Mongo won't work in the cloud)
-   - `JWT_SECRET` — long random string
-   - `NEXT_PUBLIC_API_URL` — `/api` (same-origin)
-   - `CLIENT_URL` — your final Vercel domain, e.g. `https://your-app.vercel.app`
-3. Deploy. No root-directory settings needed.
-
-Note: uploads are capped at 4MB per file because Vercel limits serverless request bodies to ~4.5MB. For larger files or heavy media, move storage to Cloudinary/S3 later.
 
 ## Next steps (v6 ideas, not yet built)
 - **Wire up a real email service** (SendGrid, Postmark, or AWS SES) — password reset currently logs the reset link to the server console instead of emailing it, since no email provider is configured. Look for the comment in `backend/controllers/authController.js` (`forgotPassword` function) — swap the `console.log` for an actual send call.

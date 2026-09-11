@@ -1,0 +1,102 @@
+'use client';
+
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import api from '../../../lib/api';
+
+export default function UploadComicPage() {
+  const router = useRouter();
+  const [form, setForm] = useState({ title: '', description: '', genre: 'General', tags: '', status: 'ongoing' });
+  const [cover, setCover] = useState(null);
+  const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  const submit = async (e, publishNow) => {
+    e.preventDefault();
+    setError('');
+    setSubmitting(true);
+    try {
+      const data = new FormData();
+      Object.entries(form).forEach(([k, v]) => data.append(k, v));
+      data.append('publish', publishNow ? 'true' : 'false');
+      if (cover) data.append('cover', cover);
+
+      const res = await api.post('/comics', data, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      router.push(`/dashboard/comics/${res.data._id}/add-chapter`);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Upload failed');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="max-w-xl mx-auto px-5 py-10">
+      <h1 className="font-display text-3xl mb-2 uppercase">Upload Comic</h1>
+      <p className="text-muted mb-8">Set up your comic's details. You'll add chapter pages next.</p>
+
+      <form onSubmit={(e) => e.preventDefault()} className="flex flex-col gap-4">
+        <input
+          required
+          placeholder="Title"
+          value={form.title}
+          onChange={(e) => setForm({ ...form, title: e.target.value })}
+          className="bg-panel panel-border rounded px-4 py-3 text-sm outline-none focus:border-accent"
+        />
+        <textarea
+          rows={4}
+          placeholder="Description"
+          value={form.description}
+          onChange={(e) => setForm({ ...form, description: e.target.value })}
+          className="bg-panel panel-border rounded px-4 py-3 text-sm outline-none focus:border-accent"
+        />
+        <input
+          placeholder="Genre (e.g. Action, Fantasy)"
+          value={form.genre}
+          onChange={(e) => setForm({ ...form, genre: e.target.value })}
+          className="bg-panel panel-border rounded px-4 py-3 text-sm outline-none focus:border-accent"
+        />
+        <input
+          placeholder="Tags (comma separated)"
+          value={form.tags}
+          onChange={(e) => setForm({ ...form, tags: e.target.value })}
+          className="bg-panel panel-border rounded px-4 py-3 text-sm outline-none focus:border-accent"
+        />
+        <select
+          value={form.status}
+          onChange={(e) => setForm({ ...form, status: e.target.value })}
+          className="bg-panel panel-border rounded px-4 py-3 text-sm"
+        >
+          <option value="ongoing">Ongoing</option>
+          <option value="completed">Completed</option>
+        </select>
+        <div>
+          <label className="text-sm text-muted block mb-2">Cover image</label>
+          <input type="file" accept="image/*" onChange={(e) => setCover(e.target.files[0])} className="text-sm" />
+        </div>
+        {error && <p className="text-sm text-accent">{error}</p>}
+        <div className="flex gap-3">
+          <button
+            type="button"
+            disabled={submitting}
+            onClick={(e) => submit(e, false)}
+            className="flex-1 px-5 py-3 border border-paper/20 rounded text-sm hover:border-accent transition disabled:opacity-50"
+          >
+            {submitting ? 'Saving...' : 'Save as Draft'}
+          </button>
+          <button
+            type="button"
+            disabled={submitting}
+            onClick={(e) => submit(e, true)}
+            className="flex-1 px-5 py-3 bg-accent text-ink font-semibold rounded disabled:opacity-50"
+          >
+            {submitting ? 'Submitting...' : 'Submit for Review'}
+          </button>
+        </div>
+        <p className="text-xs text-muted">Drafts stay private until you submit them. Either way, you'll add chapters next.</p>
+      </form>
+    </div>
+  );
+}

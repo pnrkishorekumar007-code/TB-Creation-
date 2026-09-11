@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Rating = require('../models/Rating');
 
 const rateComic = async (req, res) => {
@@ -21,6 +22,9 @@ const rateComic = async (req, res) => {
 const getComicRatings = async (req, res) => {
   try {
     const { comicId } = req.params;
+    if (!mongoose.isValidObjectId(comicId)) {
+      return res.status(400).json({ message: 'Invalid comic id' });
+    }
     const stats = await Rating.aggregate([
       { $match: { comic: new (require('mongoose').Types.ObjectId)(comicId) } },
       { $group: { _id: '$comic', average: { $avg: '$value' }, count: { $sum: 1 } } },

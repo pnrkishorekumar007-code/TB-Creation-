@@ -1,10 +1,10 @@
-require('dotenv').config({ path: require('path').join(__dirname, '.env') });
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const path = require('path');
 const connectDB = require('./config/db');
-const File = require('./models/File');
 
 const authRoutes = require('./routes/authRoutes');
 const comicRoutes = require('./routes/comicRoutes');
@@ -26,30 +26,10 @@ connectDB();
 
 const app = express();
 
-// Behind Vercel/other proxies, express-rate-limit needs this to see real client IPs.
-app.set('trust proxy', 1);
-
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
-// Reflect any origin: the frontend calls this API same-origin (/api rewrite),
-// and a hardcoded CLIENT_URL that drifts from the real domain would block
-// even same-origin calls (browsers attach Origin to POST requests).
-// Safe because auth uses Bearer tokens, never cookies.
-app.use(cors({ origin: true }));
+app.use(cors({ origin: process.env.CLIENT_URL, credentials: true }));
 app.use(express.json());
-
-// Uploaded files live in MongoDB (serverless filesystems are ephemeral),
-// so /uploads/* is served from the database instead of disk.
-app.get('/uploads/:folder/:filename', async (req, res) => {
-  try {
-    const file = await File.findOne({ path: `${req.params.folder}/${req.params.filename}` });
-    if (!file) return res.status(404).json({ message: 'File not found' });
-    res.set('Content-Type', file.contentType);
-    res.set('Cache-Control', 'public, max-age=31536000, immutable');
-    res.send(file.data);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // General API limiter — generous, just stops runaway scripts/bots.
 const generalLimiter = rateLimit({
@@ -71,7 +51,9 @@ const authLimiter = rateLimit({
 });
 app.use('/api/auth', authLimiter);
 
-app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', message: 'TB Creation API Running' });
+});
 
 app.use('/api/auth', authRoutes);
 app.use('/api/comics', comicRoutes);
@@ -98,6 +80,12 @@ app.use((err, req, res, next) => {
   if (err instanceof multer.MulterError) {
     return res.status(400).json({ message: `Upload error: ${err.message}` });
   }
+  if (err.name === 'ValidationError') {
+    return res.status(400).json({ message: err.message });
+  }
+  if (err.name === 'CastError') {
+    return res.status(400).json({ message: 'Invalid id format' });
+  }
   if (err) {
     console.error(err);
     return res.status(err.status || 500).json({ message: err.message || 'Server error' });
@@ -105,11 +93,5 @@ app.use((err, req, res, next) => {
   next();
 });
 
-// Exported for Vercel serverless functions (api/index.js); listens only
-// when started directly with `node server.js` / `npm run dev`.
-module.exports = app;
-
-if (require.main === module) {
-  const PORT = process.env.PORT || 5000;
-  app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-}
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

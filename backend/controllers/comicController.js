@@ -2,14 +2,14 @@ const Comic = require('../models/Comic');
 const Chapter = require('../models/Chapter');
 const Follow = require('../models/Follow');
 const Notification = require('../models/Notification');
-const File = require('../models/File');
+const mongoose = require('mongoose');
 
 const createComic = async (req, res) => {
   try {
     const { title, description, genre, tags, status, publish } = req.body;
     if (!title) return res.status(400).json({ message: 'Title is required' });
 
-    const coverUrl = req.file ? `/uploads/covers/${await File.saveUpload(req.file, 'covers')}` : '';
+    const coverUrl = req.file ? `/uploads/covers/${req.file.filename}` : '';
 
     const comic = await Comic.create({
       title,
@@ -77,19 +77,21 @@ const getComics = async (req, res) => {
 
 const getComicById = async (req, res) => {
   try {
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      return res.status(400).json({ message: 'Invalid comic id' });
+    }
     const comic = await Comic.findById(req.params.id).populate('author', 'name bio avatarUrl');
     if (!comic) return res.status(404).json({ message: 'Comic not found' });
 
-    // Unpublished drafts/pending/rejected comics are only visible to their
-    // author or an admin — don't leak them via direct IDs.
-    const authorId = comic.author?._id || comic.author;
-    const isOwnerOrAdmin =
-      req.user && (String(authorId) === String(req.user._id) || req.user.role === 'admin');
-    if (comic.approvalStatus !== 'approved' && !isOwnerOrAdmin) {
+    const authorId = comic.author && (comic.author._id || comic.author);
+    const isOwner = req.user && String(authorId) === String(req.user._id);
+    const isAdmin = req.user && req.user.role === 'admin';
+    if (comic.approvalStatus !== 'approved' && !isOwner && !isAdmin) {
       return res.status(404).json({ message: 'Comic not found' });
     }
 
-    await Comic.updateOne({ _id: comic._id }, { $inc: { views: 1 } });
+    comic.views += 1;
+    await comic.save();
 
     const chapters = await Chapter.find({ comic: comic._id, publishAt: { $lte: new Date() } }).sort({ order: 1 });
 
@@ -125,35 +127,24 @@ const addChapter = async (req, res) => {
       return res.status(403).json({ message: 'Not your comic' });
     }
 
-    const { title, order, publishAt } = req.body;
-    if (!title) return res.status(400).json({ message: 'Chapter title is required' });
-
-    const publishDate = publishAt ? new Date(publishAt) : new Date();
-    if (Number.isNaN(publishDate.getTime())) {
-      return res.status(400).json({ message: 'publishAt must be a valid date' });
-    }
-
-    // Persist files only after all validation passes, so bad requests
-    // don't leave orphaned uploads in the database.
-    const pageFilenames = [];
-    for (const f of req.files || []) {
-      pageFilenames.push(await File.saveUpload(f, 'pages'));
-    }
-    const pageImages = pageFilenames.map((name) => `/uploads/pages/${name}`);
+    const pageImages = (req.files || []).map((f) => `/uploads/pages/${f.filename}`);
     if (pageImages.length === 0) {
       return res.status(400).json({ message: 'At least one page image is required' });
     }
+
+    const { title, order, publishAt } = req.body;
+    if (!title) return res.status(400).json({ message: 'Chapter title is required' });
 
     const chapter = await Chapter.create({
       comic: comic._id,
       title,
       order: Number(order) || 1,
       pageImages,
-      publishAt: publishDate,
+      publishAt: publishAt ? new Date(publishAt) : new Date(),
     });
 
     // Notify followers only if the chapter is publishing immediately
-    if (!publishAt || publishDate <= new Date()) {
+    if (!publishAt || new Date(publishAt) <= new Date()) {
       const followers = await Follow.find({ author: comic.author });
       if (followers.length > 0) {
         await Notification.insertMany(

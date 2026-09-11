@@ -1,5 +1,5 @@
 const Script = require('../models/Script');
-const File = require('../models/File');
+const mongoose = require('mongoose');
 
 const createScript = async (req, res) => {
   try {
@@ -7,12 +7,11 @@ const createScript = async (req, res) => {
     if (!title) return res.status(400).json({ message: 'Title is required' });
     if (!req.file) return res.status(400).json({ message: 'Script file is required' });
 
-    const filename = await File.saveUpload(req.file, 'scripts');
     const script = await Script.create({
       title,
       synopsis,
       genre,
-      fileUrl: `/uploads/scripts/${filename}`,
+      fileUrl: `/uploads/scripts/${req.file.filename}`,
       author: req.user._id,
       approvalStatus: publish === 'true' ? 'pending' : 'draft',
     });
@@ -68,19 +67,21 @@ const getScripts = async (req, res) => {
 
 const getScriptById = async (req, res) => {
   try {
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      return res.status(400).json({ message: 'Invalid script id' });
+    }
     const script = await Script.findById(req.params.id).populate('author', 'name bio avatarUrl');
     if (!script) return res.status(404).json({ message: 'Script not found' });
 
-    // Unpublished drafts/pending/rejected scripts are only visible to their
-    // author or an admin — don't leak them via direct IDs.
-    const authorId = script.author?._id || script.author;
-    const isOwnerOrAdmin =
-      req.user && (String(authorId) === String(req.user._id) || req.user.role === 'admin');
-    if (script.approvalStatus !== 'approved' && !isOwnerOrAdmin) {
+    const authorId = script.author && (script.author._id || script.author);
+    const isOwner = req.user && String(authorId) === String(req.user._id);
+    const isAdmin = req.user && req.user.role === 'admin';
+    if (script.approvalStatus !== 'approved' && !isOwner && !isAdmin) {
       return res.status(404).json({ message: 'Script not found' });
     }
 
-    await Script.updateOne({ _id: script._id }, { $inc: { views: 1 } });
+    script.views += 1;
+    await script.save();
 
     res.json(script);
   } catch (err) {

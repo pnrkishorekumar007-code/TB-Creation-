@@ -1,10 +1,7 @@
 const Comic = require('../models/Comic');
 const Script = require('../models/Script');
 
-// Whitelists prevent arbitrary values bypassing schema enum validation
-// (findByIdAndUpdate skips validators by default).
-const COMIC_STATUSES = ['approved', 'rejected'];
-const SCRIPT_STATUSES = ['approved', 'rejected'];
+const REVIEW_STATUSES = ['approved', 'rejected'];
 
 const getPendingComics = async (req, res) => {
   try {
@@ -18,7 +15,7 @@ const getPendingComics = async (req, res) => {
 const reviewComic = async (req, res) => {
   try {
     const { status } = req.body;
-    if (!COMIC_STATUSES.includes(status)) {
+    if (!REVIEW_STATUSES.includes(status)) {
       return res.status(400).json({ message: "status must be 'approved' or 'rejected'" });
     }
     const comic = await Comic.findByIdAndUpdate(req.params.id, { approvalStatus: status }, { new: true });
@@ -41,7 +38,7 @@ const getPendingScripts = async (req, res) => {
 const reviewScript = async (req, res) => {
   try {
     const { status } = req.body;
-    if (!SCRIPT_STATUSES.includes(status)) {
+    if (!REVIEW_STATUSES.includes(status)) {
       return res.status(400).json({ message: "status must be 'approved' or 'rejected'" });
     }
     const script = await Script.findByIdAndUpdate(req.params.id, { approvalStatus: status }, { new: true });
