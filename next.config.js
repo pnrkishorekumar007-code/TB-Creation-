@@ -29,6 +29,7 @@ const contentSecurityPolicy = [
 ].join('; ');
 
 const nextConfig = {
+  poweredByHeader: false,
   images: {
     remotePatterns: [
       { protocol: 'http', hostname: 'localhost' },

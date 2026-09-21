@@ -64,7 +64,7 @@ export default function Navbar() {
 
   return (
     <header className="sticky top-0 z-40 bg-ink/90 backdrop-blur panel-border border-b">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-2 sm:gap-3">
         {/* Mobile hamburger */}
         <button
           type="button"
@@ -88,7 +88,7 @@ export default function Navbar() {
         {/* Logo */}
         <Link
           href="/"
-          className="font-display text-2xl sm:text-[1.7rem] tracking-wide text-paper uppercase shrink-0"
+          className="font-display text-xl sm:text-[1.7rem] tracking-wide text-paper uppercase shrink-0"
           aria-label="TB Creation home"
         >
           TB<span className="text-accent">Creation</span>
@@ -129,7 +129,7 @@ export default function Navbar() {
         </div>
 
         {/* Right cluster */}
-        <div className="flex items-center gap-1.5 sm:gap-2">
+        <div className="flex items-center gap-1 sm:gap-2">
           <ThemeToggle />
           <NotificationBell />
           {user && (
@@ -186,21 +186,17 @@ export default function Navbar() {
             </>
           )}
 
-          {/* Mobile actions */}
-          <Link href={publishHref} className="sm:hidden text-sm px-3 py-2 bg-accent text-ink font-bold rounded-md">
-            {publishLabel}
-          </Link>
-          <button
-            onClick={logout}
-            className="sm:hidden p-2 text-muted hover:text-paper"
-            aria-label="Log out"
-            title="Log out"
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-              <path d="m16 17 5-5-5-5M21 12H9" />
-            </svg>
-          </button>
+          {/* Mobile actions: the drawer carries the full nav (Publish, Log out),
+              so the header keeps only a compact Publish CTA for logged-out
+              visitors. This is what previously overflowed 320-375px screens. */}
+          {!user && (
+            <Link
+              href={publishHref}
+              className="sm:hidden text-xs px-2.5 py-1.5 bg-accent text-ink font-bold rounded-md whitespace-nowrap"
+            >
+              {publishLabel}
+            </Link>
+          )}
         </div>
       </div>
 
