@@ -79,6 +79,25 @@ const FILETYPES = {
   },
 };
 
+// Best-effort removal of files multer already wrote to disk. Called when a
+// request fails validation (or a later file in the same request is rejected),
+// so a partially-accepted multipart upload doesn't leave orphaned .bin files.
+const cleanupFiles = (files) => {
+  for (const file of files || []) {
+    const onDisk = file.path || path.join(file.destination, file.filename);
+    try {
+      fs.unlinkSync(onDisk);
+    } catch (e) {
+      // Already removed or never written — fine.
+    }
+  }
+};
+
+const cleanupUploads = (req) => {
+  const files = req.files && req.files.length ? req.files : req.file ? [req.file] : [];
+  cleanupFiles(files);
+};
+
 // Determine the real file type from its leading bytes (never trust the client's
 // reported MIME type or filename extension).
 const sniffFileType = (buf) => {
@@ -129,6 +148,9 @@ const validateUploads = (allowedExts) => {
       for (const file of files) validateFile(file);
       next();
     } catch (err) {
+      // Drop every file from this request, including ones already validated
+      // before the failure, so nothing is orphaned on disk.
+      cleanupFiles(files);
       next(err);
     }
   };
@@ -149,4 +171,5 @@ module.exports = {
   uploadAvatar,
   validateImages,
   validateScript,
+  cleanupUploads,
 };

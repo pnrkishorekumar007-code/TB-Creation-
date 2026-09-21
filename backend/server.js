@@ -161,8 +161,11 @@ app.use('/api', (req, res) => {
 });
 
 const multer = require('multer');
+const { cleanupUploads } = require('./middleware/upload');
 app.use((err, req, res, next) => {
   if (err instanceof multer.MulterError) {
+    // Multer can leave partial files on disk when a limit is hit; remove them.
+    cleanupUploads(req);
     return res.status(400).json({ message: `Upload error: ${err.message}` });
   }
   if (err.name === 'ValidationError') {
