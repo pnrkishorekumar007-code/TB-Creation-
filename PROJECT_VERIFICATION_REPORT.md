@@ -3,20 +3,20 @@
 **Repository:** https://github.com/pnrkishorekumar007-code/TB-Creation-.git
 **Live website:** https://tb-creation.vercel.app/
 **Verification date:** 21 Sep 2026
-**Verification method:** Code inspection (file-by-file), live traffic probing, local `npm run build`/`lint`/`audit`, a 24-case live security test matrix, and Playwright UI testing against the actual running frontend (current production build on localhost:3099 and the developer's dev instance on localhost:3000). No application code was modified to produce this report.
+**Verification method:** File-by-file code inspection of the full working tree (backend, frontend, config, git history), local `npm run lint` / `npm run build` / `npm audit`, a 26-case live API security matrix executed against a locally-spawned backend running on the MongoDB Atlas cluster, a rate-limit (429) probe, direct HTTP probes of the deployed live site (routes + headers), and Playwright viewport/console checks on the live site. **No application code was modified to produce this report.** All test accounts/media were removed after testing (verified: 0 leftover rows).
 
 ---
 
 ## 1. Executive Summary
 
-**Status: PARTIALLY COMPLETE.**
+**Status: PARTIALLY COMPLETE — security-hardened code is in the tree and verified locally, but the live production site is currently broken.**
 
-- **Local working tree:** The previously requested work (parts 1–3) is **implemented and verified locally** — security headers + CSP, CORS allowlist, rate limiting tiers, Next.js 15 upgrade, media access gate + signed URLs, blocked `admin` self-signup, comment injection fixes, prod-JWT boot guard. 24/24 security test matrix passed; lint, production build, and both `npm audit` runs are clean.
-- **Live website: STALE.** `https://tb-creation.vercel.app/` does **not** contain the working-tree fixes: it serves none of the new security headers (only Vercel's platform HSTS), returns 404 for `/robots.txt` and `/sitemap.xml`, and lacks the `/api/search`, `/api/stats`, `/search`, and media-gate code that exists in the working tree. The live API *responds* because the deployed snapshot was built from an earlier state, **not** from this repository's current/committed backend (no committed revision of `backend/server.js` ever exported the Express app — see High finding H-1).
-- **Deployability of the current tree is not established.** Two blockers must be resolved before a fresh production deploy: the Vercel serverless bridge (`api/index.js` ↔ `backend/server.js`) is broken in the tree as it stands, and media storage is local-disk (ephemeral on Vercel).
-- **Because much of the AWS-adjacent data model is fresh** (the development database has zero comics), content-dependent flows (reader, chapter navigation, creator publish/approve lifecycle, admin review) are `CANNOT VERIFY` rather than `COMPLETE`.
+- **Working tree:** The previously requested work is implemented and verified in code: security headers + CSP, CORS allowlist, rate-limiting tiers, serverless bridge fix (`module.exports = app` in `backend/server.js`), media access gate + HMAC signed URLs (private-by-default; expiry, tamper and cross-owner verified), blocked `admin` self-signup (role coercion), comment/description limits, production JWT boot guard, and the prior-report P0 items are committed and pushed.
+- **Verified locally (API, against Atlas):** 26/26 security/functional probes PASS, incl. private media 404 for anonymous/non-owner, signed URL 200, tampered/expired signature 404, cross-user chapter-add/submit 403, reader-vs-author 403, reader-vs-admin 403, role-escalation coercion, invalid input 400s, and anonymous-list exclusion of pending content. `npm run lint` clean; `npm run build` success (27 routes incl. `/robots.txt` + `/sitemap.xml`); `npm audit` 0 vulnerabilities on root and backend.
+- **Live website: FRONTEND DEPLOYED, API COMPLETELY DOWN.** The live site serves the new build (security headers present; `/robots.txt` and `/sitemap.xml` return 200), but every `/api/*` endpoint (incl. `/api/health`) returns HTTP 500. The only code paths that can abort the serverless cold start before any route is served are the production `JWT_SECRET` gate (`backend/server.js`) and the DB-connect `process.exit(1)` (`backend/config/db.js`) — both can fire when Vercel's environment has no/weak `JWT_SECRET` and/or no `MONGO_URI`. Product is not operationally functional (no login, no data, no uploads) until Vercel env vars are provisioned and a redeploy is verified (Critical C-1).
+- **Not verifiable:** DB has 0 comics and 0 admins. Reader flow (chapter rendering, prev/next), admin review flow, publish/approve lifecycle, and analytics are CANNOT VERIFY end-to-end — they need seeded approved content and an admin account.
 
-Do not ship the live site until the P0 items in §11 are addressed.
+Do not treat the site as released until C-1 and the P0 items in §11 are resolved.
 
 ---
 
@@ -24,212 +24,209 @@ Do not ship the live site until the P0 items in §11 are addressed.
 
 | Task | Status | Evidence | Notes |
 |------|--------|----------|-------|
-| 1. Security audit (secrets/git) | COMPLETE | `git ls-files` + `git log --all --diff-filter=A` show only `.env.example` variants ever tracked; no API keys / passwords / tokens / private keys / DB credentials in tracked code; `NEXT_PUBLIC_*` used only for API_URL/SITE_URL. | `backend/.env` (untracked) holds real MongoDB credentials — a React Dev DB; rotation recommended before production. No printed secrets in this report. |
-| 2. Authentication | PARTIALLY COMPLETE | Signup/login/logout/me all verified (API tests + UI signup on a throwaway account + raw `Set-Cookie` shows `HttpOnly; SameSite=Lax`; cookie cleared on logout). Password reset exists (token flow) but is **console-only** deliverable; **email verification is NOT IMPLEMENTED**. | Unauthenticated `/dashboard` renders a client gate and every data API returns 401/403 server-side (verified). |
-| 3. Authorization | COMPLETE | Auth middleware resolves user from JWT cookie/Bearer server-side; roles come from the DB user, never from body/URL/query/hidden fields. Ownership verified in code and tested (cross-user chapter add / submit / upload access → 403/404). | No `userId` from request body is trusted for any scoped resource. |
-| 4. Database security | COMPLETE | MongoDB Atlas via Mongoose. Access control enforced at the application layer (controller ownership + role middleware); no client-injected query paths; password excluded from serialized user. | RLS/Firestore-rules model N/A for MongoDB; note limitations in §6. |
-| 5. Admin security | PARTIALLY COMPLETE | All `/api/admin/*` routes require `protect` + `requireRole('admin')` (verified in code); signup blocks `admin` self-assignment (`role === 'author' ? 'author' : 'reader'`). | No admin account exists → admin **runtime** flows CANNOT VERIFY; role-field manipulation tested and rejected. |
-| 6. API security | COMPLETE | 45 route handlers across 14 route files audited (full table in §8): auth where required, ownership checks, validation, safe errors, no secrets in responses, rate-limited. | Comment DELETE is owner/admin (verified in code). |
-| 7. Input validation | COMPLETE | Server-side: email regex, `password.length >= 6`, required fields on all creators, magic-byte + size upload validation, numeric/expiry signed-URL checks. | Gap: comment text has no server-side max length (only list cap 200) — Low. |
-| 8. XSS / injection | COMPLETE | Only 2 `dangerouslySetInnerHTML` uses (`app/layout.js:69`, `components/ui/JsonLd.js:16`) — both JSON-LD, sanitized/escaped; user-generated fields render as plain React text. No SQL; Mongoose query params. | No stored XSS path found. |
-| 9. File upload security | COMPLETE | Auth + ownership required, magic-byte type validation (image/script filters), size limits, random disk names (no client-controlled extensions), traversal-safe, per-user dirs. | Rejected multipart leaves an orphan temp file — Low/P2 (cleanup). |
-| 10. Media storage | PARTIALLY COMPLETE | Full trace verified locally: upload → local disk → `Media` doc (private by default) → owner/admin `GET /uploads/...` → HMAC signed URL (expiry) → `serveMedia` 404s without valid signature/session; legacy `public` files serve normally. | Storage driver is **local disk** → non-durable on Vercel (P0, §11). |
-| 11. User data isolation | COMPLETE | Bookmark/like/follow/history/rating/notification routes scope to `req.user.id`; profile edit via `/api/authors/me`; private uploads owner-only (404 to others, tested). | Dashboard/analytics flows can't be exercised (no data) but server checks verified. |
-| 12. Security headers | PARTIALLY COMPLETE | Working-tree Next (`next.config.js`) sends CSP (prod-only), HSTS, X-Content-Type-Options, X-Frame-Options, Referrer-Policy, Permissions-Policy; Express sends full helmet set (verified on live `/api/*` responses). | **Live website serves none of these headers** (only Vercel-platform HSTS) because it runs a stale build — see H-1. |
-| 13. CORS | COMPLETE | Exact-origin allowlist from `CLIENT_URL` (no wildcard), fail-closed callback; verified allowlisted origin → `ACAO`, other origins → no CORS headers; authenticated APIs restricted. | Same-origin `/api` for prod (`vercel.json` rewrites). |
-| 14. Rate limiting | COMPLETE | `express-rate-limit`: `generalLimiter` 300/15m on `/api`, `authLimiter` 20/15m on `/api/auth`, `writeLimiter` 60/15m on non-GET for comment/report/contact/like/rating/follow/bookmark/history/comic/script/authors-me/admin. 429 behavior verified (20 attempts → 429). | Covers login, signup, password reset, comments, contact, uploads, admin. |
-| 15. Error handling | COMPLETE | Central error middleware; JSON `{ message }` responses; no stack traces / DB errors / SQL / env in responses; `serverError` helper; Next `app/error.js` boundary present. | Duplicate-email → 400 with clean message (not 500). |
-| 16. Debug / test code | COMPLETE | No bypasses, test creds, debug endpoints, or test admin routes found; `console.log` only 7 hits, all benign. | `authController.js:121` reset-URL log gated on `!== 'production'` (would log on staging) — Low. |
-| 17. Dependencies | COMPLETE | `npm audit --omit=dev` (root): **0 vulnerabilities**; `npm audit` (backend): **0 vulnerabilities**. No suspicious packages. | Next 15.5.25; `next lint` deprecated but functional. |
-| 18. Next.js security | COMPLETE | No `'use server'` directives, no `middleware.js`, no `app/api` handlers; cookies httpOnly (from server) with JS never reading the token; images remotePatterns limited to localhost/127.0.0.1/tb-creation.vercel.app; route protection is server-side. | Note: the developer's `:3000` dev instance is stale and ran the pre-hardening frontend (JS-visible cookie artifact) — restart after pulling current code. |
-| 19. Code quality | PARTIALLY COMPLETE | `backend/models/File.js` confirmed genuinely unused (never imported); no broken imports (build clean); just-in-case `frontend/` stale duplicate app (Next 14.2.35) still tracked. | Duplicate implementation residue remains (`frontend/`) — P2 removal. |
-| 20. Build / test | COMPLETE | See §10 for exact commands/results (lint clean, build success — 22 routes incl. `/robots.txt` & `/sitemap.xml`, audits 0). | No test suite and no typecheck script exist (recorded, not a failure). |
-| 21. Functional verification | PARTIALLY COMPLETE | Verified: homepage, comics (empty state), login/signup/logout (UI + API), dashboard client gate + server 401/403, unauthorized/non-owner/admin protections. **CANNOT VERIFY** (no approved content / no admin): series page, chapter page, manga images, prev/next, create series, upload cover, publish/edit/delete, full dashboard/admin. | No comic/script **edit or delete** endpoints exist at all (`PUT /:id`, `DELETE /:id` absent) — creator content lifecycle is partial by design. |
-| 22. Responsive / UI | PARTIALLY COMPLETE | Playwright viewport sweep 320/375/390/414/768/1024/1280/1440 on `/`, `/comics`, `/login`, `/signup` at the current production build: **zero horizontal overflow**, forms/nav intact. | Series/reader/dashboard/upload/admin pages unreachable without data/admin → not swept. |
-| 23. SEO | PARTIALLY COMPLETE | Home title, description, OG (`og:title/og:description/og:type`), robots meta verified in current build; `app/robots.js` + `app/sitemap.js` produce routes in build output. | `canonical` not emitted (null on home); **live site 404s on robots.txt/sitemap.xml** (files untracked → never deployed); OG present on `comics/[id]`, `scripts/[id]`, `authors/[id]` (code-verified). |
-| 24. Performance | PARTIALLY COMPLETE | `next/image` used across UI + reader; LCP `priority` flags in place; fonts via `next/font` (self-hosted, no render-block); shared JS 103 kB; 14 `'use client'` modules (mostly small islands). | DB indexes unverified (no data yet); reader image loading/prev-next can't be measured without content. |
+| 1. Security audit (secrets/git) | COMPLETE | `git ls-files` shows only `.env.example`-style files ever tracked; `.env` / `backend/uploads/*` gitignored; `NEXT_PUBLIC_*` only for `API_URL`/`SITE_URL`; working tree clean. | Atlas DB credentials live only in untracked `backend/.env` and were pasted into chat during setup -> rotate DB user password (P0). Nothing printed in this report. |
+| 2. Authentication | PARTIALLY COMPLETE | Signup/login/logout/`/me` verified live (201/200/401); cookie raw-captured: `HttpOnly; SameSite=Lax`, `secure` in prod. Reset flows exist (hashed token, 1h expiry) but delivery is console-only. | Email verification NOT IMPLEMENTED. Reset URL printed to server log when non-prod (M-1). |
+| 3. Authorization | COMPLETE | User resolved server-side from JWT (cookie preferred, Bearer fallback); roles read from DB, never body/URL/query; ownership checks in every scoped route; cross-user 403s verified. | No client-supplied `userId` is trusted anywhere. |
+| 4. Database security | COMPLETE | MongoDB Atlas via Mongoose 8. Enforcement at app layer: ownership + `requireRole`, no client-controlled operators (strings coerced), password excluded at query sites. | `User.password` not `select:false` schema-level (L-3). |
+| 5. Admin security | PARTIALLY COMPLETE | All `/api/admin/*` behind `protect` + `requireRole('admin')`; matrix: reader -> 403; signup coerces `role:'admin'` -> reader (verified). | No admin account exists -> admin runtime flow CANNOT VERIFY. |
+| 6. API security | COMPLETE | 17 route files / all handlers audited (inventory §8); auth/ownership/validation/error-safety per route; matrix PASS. | Health, catch-all 404, central error middleware present. |
+| 7. Input validation | COMPLETE | Email regex, password >= 6, required fields, comment <= 1000, report reason <= 500 + target allow-list, rating 1-5, ObjectId checks, magic-byte + size upload checks. | Array/object `search`/`genre`/`page` params can 500 instead of 400 (L-4). |
+| 8. XSS / injection | COMPLETE | Only 2 `dangerouslySetInnerHTML` uses (static theme script; escaped JSON-LD). UGC renders as plain text. No SQL; regex-escaped search. | No XSS vector found. |
+| 9. File upload security | COMPLETE | Auth + ownership; magic-byte type validation, `.bin` -> sniffed safe ext; size caps (cover 5MB / pages 8MB / script 15MB / avatar 3MB); random disk names; traversal-safe. | Rejected multipart leaves orphan temp `.bin` (L-5). |
+| 10. Media storage | COMPLETE (security flow) | Upload -> disk -> `Media` doc (private by default) -> `/uploads` gate -> HMAC signed URL (1h TTL) -> owner/admin. Matrix: private 404, signed 200, tampered/expired 404. | Driver is local disk -> ephemeral on Vercel (H-1). |
+| 11. User data isolation | COMPLETE | Bookmarks/likes/follows/history/ratings/notifications scope to `req.user.id`; profile edits self-only; private media owner-only. | Dashboard/analytics not exercisable without data (server-side verified). |
+| 12. Security headers | COMPLETE | Live Next HTML sends CSP, HSTS, `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`; Express `helmet` verified for API. | CSP is prod-only (correct). |
+| 13. CORS | COMPLETE | Exact-origin allowlist from `CLIENT_URL`, fail-closed when unset, `credentials: true`; same-origin `/api` via `vercel.json` rewrites. | Combined with CSP `connect-src 'self'`. |
+| 14. Rate limiting | COMPLETE | General 300/15m, auth 20/15m, write-tier 60/15m (non-GET). Verified 21st failed login -> 429. | Covers login/signup/reset/comment/contact/upload/admin. |
+| 15. Error handling | COMPLETE | Central error middleware + `serverError()`: JSON `{ message }`, no stack/queries/paths leaked; CastError->400, multer->400, dup-key->400. | Server-side `console.error` remains (legit). |
+| 16. Debug / test code | COMPLETE | No bypasses, test creds, debug routes, test-admin endpoints. 7 benign `console.*` sites. | Reset URL logged when non-prod (L-10). |
+| 17. Dependencies | COMPLETE | `npm audit` -> 0 vulns (root, backend). `overrides` pin `qs`/`postcss`. | `next lint` deprecated - migrate to ESLint CLI (P2). |
+| 18. Next.js security | COMPLETE | No `middleware.js`, no `app/api` handlers, no `'use server'`. Protected pages client-gated with server-side API enforcement. Token httpOnly; JS never writes it. | `X-Powered-By: Next.js` still emitted (L-2). |
+| 19. Code quality | PARTIALLY COMPLETE | `backend/models/File.js` confirmed dead. Build clean -> no broken imports. | Stale duplicate `frontend/` app (46 tracked files) remains (P2). |
+| 20. Build / test | COMPLETE | See §10: lint clean; `next build` success (27 routes); audits 0. | No test suite/typecheck script exist (recorded, not a defect). |
+| 21. Functional verification | PARTIALLY COMPLETE | Live/API: homepage, signup/login/logout/me, dashboard/profile/admin gates vs 401/403, ownership, media gates, anonymous list filtering. Reader rendering, prev/next, full publish/edit/delete lifecycle, admin review: CANNOT VERIFY (0 comics, 0 admins; live API down). | Comic/script edit or delete endpoints do not exist (M-2). |
+| 22. Responsive / UI | PARTIALLY COMPLETE | Playwright: no breakage at 390-1440, but horizontal overflow at 320px and 375px on every page (navbar right-cluster -> 386px scrollWidth). | Reader/upload/admin pages unreachable without content. |
+| 23. SEO | PARTIALLY COMPLETE | Title/description/OG+Twitter base; dynamic `generateMetadata`; `/robots.txt` + `/sitemap.xml` 200 live. | No canonical; sitemap static-routes only; `lastModified` recomputed per request (L-7). |
+| 24. Performance | PARTIALLY COMPLETE | `next/image` (9 files) with `priority` on LCP; reader `unoptimized`; `next/font` self-hosted; shared JS 103 kB. | 33 `'use client'` modules, no `next/dynamic` lazy boundaries; reader perf not measurable; DB indexes partial. |
 
 ---
 
 ## 3. Security Findings
 
 ### Critical
-None identified.
+- **C-1 - Live API is completely down: every `/api/*` endpoint returns HTTP 500 (incl. `/api/health`).**
+  Confirmed by direct probes on 21 Sep 2026. The deployed frontend is the current build (new CSP headers, working `/robots.txt` and `/sitemap.xml`), so this is the new API function, not the old broken bridge. The only code paths that can abort the serverless cold start before any route exists are (a) the production `JWT_SECRET` gate - `backend/server.js` `process.exit(1)` when `JWT_SECRET` is unset/short/example; or (b) `backend/config/db.js` `process.exit(1)` when Mongo cannot connect (no `MONGO_URI`). Both hard-exit inside the serverless function -> blanket 500. **Vercel's environment almost certainly has no/weak `JWT_SECRET` and/or no `MONGO_URI`** (cannot inspect remotely; fix + redeploy + `/api/health` check will confirm). Result: no login, no data, no uploads, no search on the live product.
 
 ### High
-- **H-1 — Current working tree is not deployable to Vercel as-is (broken serverless bridge).**
-  `api/index.js` is `const app = require('../backend/server'); module.exports = app;` but **no revision of `backend/server.js` ever contains `module.exports`** (verified via `git log -S 'module.exports' -- backend/server.js` = empty, and the working-tree file ends in unconditional `app.listen(...)`). A fresh deployment would export `{}` from the API function → every `/api/*` and `/uploads/*` request fails. The live site's *working* API and its *missing* working-tree features (search/stats routes, new headers, robots/sitemap) prove the live deployment was built from a different, older state. No code that has been committed in this repo can serve `/api` on Vercel today.
-- **H-2 — Media storage is local disk (ephemeral on Vercel).** Uploads go to `backend/uploads` via multer. On Vercel serverless, this directory does not persist (per-instance, wiped on redeploy/scale-to-zero), so uploads and subsequent media reads break in production. Required for the "uploads work" claim to hold in production.
+- **H-1 - Media storage is local disk (`multer.diskStorage` -> `backend/uploads/`).** Secure as implemented, but non-durable on Vercel serverless: files live on ephemeral per-instance disk and are lost on scale-to-zero/redeploy; `/uploads` serves from that same disk. Uploaded content cannot survive in production. Needs persistent object storage (S3 / Azure Blob / Vercel Blob) behind the existing signed-URL layer.
 
 ### Medium
-- **M-1 — Password reset is console-only.** `forgot-password` generates a token and prints the reset URL to the server log (`authController.js`); with no SMTP service configured, reset links can never reach users in production, and the dev-gated log (`NODE_ENV !== 'production'`) would leak reset URLs on any staging/preview env. Active the existential email provider or bound the log to a positive allowlist.
-- **M-2 — Secrets not provisioned for production.** `JWT_SECRET` still uses the placeholder locally and `MEDIA_SIGNING_SECRET` is unset; the new production boot guard refuses to start with the example values, but no real secrets are set in Vercel's environment yet (`backend/.env.example` documents this).
-- **M-3 — Comic/script lifecycle is incomplete server-side.** There are no update or delete endpoints for comics or scripts (`PUT /:id`, `DELETE /:id` do not exist in `comicRoutes.js`/`scriptRoutes.js`). Creators can create + add chapters + submit for review, but cannot edit or delete a series.
+- **M-1 - Password reset is console-only.** `forgotPassword` prints the reset URL to the server log when `NODE_ENV !== 'production'`; no SMTP/email provider is wired, so reset links never reach real users in production, and the dev-gated log would leak them in any non-prod (staging/preview) environment.
+- **M-2 - Creator lifecycle incomplete server-side.** No update or delete endpoints for comics or scripts. Creators can create, add chapters, and submit for review, but cannot edit or delete a series (matches the UI gap: dashboard shows only upload screens).
+- **M-3 - Live environment is empty and cannot be exercised.** Atlas DB currently has 0 comics / 0 scripts / 0 admins; content-dependent flows and the admin review flow remain verification gaps.
+- **M-4 - `backend/.env` currently holds example/default values** (localhost URI, placeholder `JWT_SECRET`). The Atlas URI + generated secret set earlier were overwritten/reverted; with the current file the local backend fails Mongo connect and crashes on `npm run dev`. (Config state, not app code.)
+- **M-5 - Atlas DB credentials were shared in plaintext** (pasted into chat during setup). The DB user password should be rotated before this environment is used beyond throwaway dev data.
 
 ### Low
-- Rejected multipart uploads leave an orphan temp file on disk (`backend/middleware/upload.js` — cleanup on filter reject).
-- Comment text has no server-side maximum length (only the list cap of 200 is applied).
-- `User.password` is not `select: false` in the schema (controllers exclude it via `serializeUser`, but a raw read could include it).
-- `X-Powered-By: Next.js` is emitted on Next responses (`poweredByHeader: false` not set).
-- Missing `favicon.ico` → 404 on the site (minor).
-- No `canonical` link emitted (title/description/OG are present).
-- Stale duplicate `frontend/` app (Next 14.2.35) and dead `backend/models/File.js` remain tracked.
+- **L-1 - Responsive overflow at 320px/375px on all pages** (navbar right-cluster; scrollWidth 386). Confirmed live.
+- **L-2 - `X-Powered-By: Next.js`** still emitted (`poweredByHeader: false` not set).
+- **L-3 - `User.password` not schema-`select:false`** (mitigated at every query site).
+- **L-4 - Array/object query params (`?search[a]=b`) cause 500 instead of 400** in `getComics`/`getScripts`.
+- **L-5 - Rejected multipart uploads leave an orphan temp `.bin`** (no unlink on filter-reject).
+- **L-6 - `/signup?role=author` is ignored**: `Navbar`/`HomeHeroActions` link the Publish CTA there, but `app/signup/page.js` never reads the param -> always `reader`.
+- **L-7 - No canonical links; `sitemap.js` omits all dynamic routes and recomputes `lastModified` per request.**
+- **L-8 - Missing `favicon.ico`** (404 on every page per Playwright console).
+- **L-9 - Dead/duplicate tree:** `backend/models/File.js` (unused) + stale `frontend/` app (46 tracked files, old Next 14, hard-coded localhost).
+- **L-10 - Reset-URL `console.log` in any non-production env** (staging/preview leak).
+- **L-11 - Scheduled chapters not previewable by owner:** `addChapter` returns unsigned paths for future-dated chapters and `getComicById` filters them out until `publishAt`.
 
 ---
 
 ## 4. Authentication
 
-Verified implementation:
-- **Signup** (`POST /api/auth/signup`): validates name/email/password (email regex, password ≥ 6), lowercases email, rejects duplicates with `400`, hashes with bcrypt(10), role allowlist `author|reader` (self-assigned `admin` silently coerced to `reader`), issues 30-day JWT via httpOnly cookie. UI flow verified end-to-end on a throwaway account (created, session set, redirect to home, navbar switched to authenticated state).
-- **Login** (`POST /api/auth/login`): lowercased lookup, bcrypt compare, same cookie issuance; rate-limited (20/15m) with 429 verified.
-- **Logout** (`POST /api/auth/logout`): clears cookie; verified by raw response `Set-Cookie: tb_token=; Path=/; Expires=Thu, 01 Jan 1970 ..., HttpOnly; SameSite=Lax`.
-- **Session/me** (`GET /api/auth/me`): resolves user from cookie (Bearer fallback) at `backend/middleware/auth.js`.
-- **Cookie config** (`authController.js:11-17`): `httpOnly: true`, `sameSite: 'lax'`, `secure: NODE_ENV === 'production'`, 30-day. Raw backend response confirmed `HttpOnly; SameSite=Lax`. The JS-visible `tb_token` occasionally seen in the developer's `:3000` instance is an artifact of that instance running pre-hardening frontend code (legacy `Cookies.set('tb_token', …)` in `frontend/lib/AuthContext.js`) — the current `lib/AuthContext.js` never writes the cookie.
-- **Protected routes**: every data endpoint requires `protect` server-side. Unauthenticated `/dashboard` shows a client gate **and** all underlying APIs return 401/403 (server, not client, is authoritative).
-- **Password reset**: implemented (`forgot-password` + `reset-password`) but delivery is console-print only (see M-1).
-- **Email verification**: NOT IMPLEMENTED.
+Verified (code + live matrix):
+- **Signup** (`POST /api/auth/signup`): required name/email/password, email regex, password >= 6, email lowercased, duplicate -> 400, bcrypt(10), role allow-list `author|reader` (self-requested `admin` coerced -> `reader`, verified), 30-day JWT in httpOnly cookie.
+- **Login** (`POST /api/auth/login`): lowercased lookup, bcrypt compare, same cookie; wrong creds -> 401 (verified); rate-limited 20/15m (429 verified on 21st attempt).
+- **Logout** (`POST /api/auth/logout`): clears cookie.
+- **Session / `GET /api/auth/me`**: user resolved from httpOnly `tb_token` cookie (Bearer fallback for scripts) - 200 with cookie, 401 without (verified).
+- **Cookie config**: `httpOnly:true`, `sameSite:'lax'`, `secure` when `NODE_ENV=production`, 30-day, `path:/`.
+- **Protected routes:** all data endpoints require `protect` -> 401 server-side (verified). Frontend gates are UX; the API is authoritative.
+- **Password reset:** implemented (`forgot-password` + `reset-password`, hashed token, 1h expiry, one-time) but delivery is console-only (M-1).
+- **Email verification:** NOT IMPLEMENTED.
 
 ---
 
 ## 5. Authorization
 
-- Authenticated user is always resolved **server-side** from the JWT (cookie preferred, Bearer fallback). The application does **not** trust `userId` from body, URL, query, or hidden fields for any scoped operation.
-- Roles come from the stored DB user (`User.role`) via `requireRole(...)`, never from client-supplied role fields.
-- Ownership verifications confirmed in code: chapters may only be added to comics the requester owns; `submit-for-review` is owner-only (cross-user → 403, tested); comment deletion is owner-or-admin; author profile edit is `/api/authors/me` (self only); bookmark/like/follow/history/rating/notification operations are bound to `req.user.id`.
-- Admin review endpoints are owner-of-task-irrelevant: they require `requireRole('admin')` (§9).
+- Authenticated user is always determined server-side from the JWT; the app does not trust `userId` from body/URL/query/hidden fields for any scoped operation.
+- Roles come from the stored DB user via `requireRole(...)`; signup blocks admin self-assignment.
+- Ownership verified in code and tested: chapters only on owned comics (cross-user 403), submit-for-review owner-or-admin (cross-user 403), comment deletion owner-or-admin, author profile edit self-only (`/api/authors/me`).
+- Matrix: reader -> author 403, reader -> admin 403, non-owner private media 404, anonymous list excludes pending content.
 
 ---
 
 ## 6. Database
 
-- **Engine:** MongoDB Atlas (Mongoose 8). Connectivity via `backend/.env` → `MONGO_URI` (credentials stored only in the untracked file; URI string is a dev-cluster credential — do not print).
-- **Access model:** RLS/Firestore-style per-document policies N/A. Enforcement is at the application/driver layer: controller ownership checks, `serializeUser` stripping `password`, no client-controlled query operators reaching the drivers, pre/post Mongoose validation on schemas.
-- **Collections/resources present and secured:** users, comics, chapters, scripts, comments, likes, follows, bookmarks, ratings, notifications, reading history, reports, contact messages, media (upload records), admin/approval state. All write paths require auth + ownership/role; public reads expose only published data.
-- **Gap:** The dev cluster is empty (0 comics), so read-path data semantics (visibility of approved vs draft content across the UI) could not be exercised with real records.
+- **Engine:** MongoDB Atlas (`tb-creation` DB) via Mongoose 8.
+- **Access model:** document-level RLS/Firestore policies do not apply to MongoDB; enforcement is at the app/driver layer (ownership checks, `requireRole`, sanitizers, no client-controlled operators reaching queries).
+- **Collections present and secured:** users, comics, chapters, scripts, comments, likes, follows, bookmarks, ratings, notifications, reading history, reports, contact messages, media.
+- **Gaps:** dev DB empty (0 comics/scripts/admins) -> read-path visibility semantics code-verified only; `User.password` lacks `select:false` (L-3).
 
 ---
 
 ## 7. Storage
 
-Full verified trace (working tree, local):
+End-to-end trace verified locally against Atlas:
+1. **Upload** -> `POST /api/comics|scripts|authors/me` multipart; multer disk storage -> `backend/uploads/<kind>/<timestamp>-<rand>.bin`; magic-byte sniff rewrites to safe derived extension and rejects disallowed types; size caps enforced.
+2. **Record** -> `Media` doc private by default; flipped public on approval (`publishFiles`) or immediately for avatars.
+3. **Authorization** -> `GET /uploads/<path>` -> `serveMedia`: safe-path regex + traversal-safe resolve -> record lookup -> private files need valid unexpired HMAC token, else 404 (indistinguishable from not-found). Verified: anonymous 404, non-owner 404.
+4. **URL generation** -> `signMediaUrl` `?e=<expires>&s=<hmac>` (1h TTL, `MEDIA_SIGNING_SECRET || JWT_SECRET`). Owner/admin payloads rewritten by `signPayloadMedia` (plain-object-only - the deep-copy corruption bug is guarded).
+5. **Browser request** -> `mediaUrl()` preserves query strings; `Image unoptimized`; signed URL 200, tampered 404, expired 404 (all verified).
+6. **Published content** -> public path; `Cache-Control: public, max-age=86400` vs `private, max-age=300`.
+7. **Credentials** -> signing secret never reaches client.
 
-1. **Upload** → `POST /api/comics/:id/chapters` / `/api/comics` / `/api/scripts` / `/api/authors/me` with multipart; `multer` disk storage writes to `backend/uploads/<type>/<random-file>`; magic-byte filters reject non-image / non-script files before commit; size caps enforced (upload middleware); ownership required (own comic for chapter pages, own profile for avatar).
-2. **Storage records** → a `Media` document is created with status **private** by default (`backend/models/Media.js`); legacy/new public files are served when marked public.
-3. **Authorization** → retrieving a private file requires either an owner/admin session cookie or a valid signed URL; `backend/middleware/serveMedia.js` returns 404 otherwise (tested: bogus path → 404, signed URL → 200, wrong/expired signature → 403/404).
-4. **URL generation** → `backend/utils/signMedia.js` issues HMAC-signed URLs with an expiry (short TTL; JWT-derived secret or `MEDIA_SIGNING_SECRET`); the earlier ObjectId/Date-corruption bug (deep rewrite turning `_id`/`author` into `{buffer:{...}}`) was found during testing and fixed with a `isPlainObject` guard — regression passes in the 24-case matrix.
-5. **Browser request** → reader hits `/uploads/<media>?e=<exp>&s=<sig>`; `serveMedia` validates and streams from disk; signed legacy files dereference to the stored local path safely (path-traversal-safe resolve).
-6. **Published content** → uses the public path; no signature needed.
-7. **Credentials** → media secrets never reach the client (signed URLs are generated server-side).
-
-**Finding:** the driver is local disk. Complete and correct on the dev machine, but non-durable / inconsistent on Vercel (H-2). Signed-URL behavior is correct and expiry verified.
+**Deployment catch:** driver (local disk) is ephemeral on Vercel (H-1). No storage-service keys exposed to client.
 
 ---
 
 ## 8. API
 
-45 route handlers across 14 files (exact routes discovered by scanning `backend/routes/*.js`):
+Route inventory (`backend/routes/*`, mounted in `backend/server.js`):
 
 | File | Endpoints | Protection |
 |------|-----------|-----------|
-| authRoutes.js | POST /signup, /login, /logout; GET /me; POST /forgot-password, /reset-password | signup/login/logout/forgot-reset public (+ auth rate limit 20/15m); /me protected |
-| comicRoutes.js | GET / (public list); GET /mine (author); GET /:id (public detail); POST / (author/admin); POST /:id/chapters (owner); PUT /:id/submit (owner) | ownership + role checked server-side; write tier rate-limited |
-| scriptRoutes.js | GET /, /mine, /:id; POST / (author/admin); PUT /:id/submit (owner) | same model as comics |
-| authorRoutes.js | GET / (public), /:id (public); PUT /me (self); PUT /me/upgrade (self, reader→author) | self-scoped |
-| adminRoutes.js | GET /comics/pending; PUT /comics/:id/review; GET /scripts/pending; PUT /scripts/:id/review | `protect` + `requireRole('admin')` on all |
-| commentRoutes.js | GET /comic/:comicId (public approved); POST / (reader+); DELETE /:id (owner/admin) | auth for writes |
-| contactRoutes.js | POST / | public + general limiter |
-| bookmarkRoutes.js | POST /toggle; GET /mine | auth |
-| ratingRoutes.js | POST /; GET /comic/:comicId | auth for write |
-| likeRoutes.js | POST /toggle; GET /status | auth for write |
-| followRoutes.js | GET /count/:authorId (public); POST /toggle; GET /status/:authorId | auth for write |
-| notificationRoutes.js | GET /; PUT /mark-read | auth |
-| readingHistoryRoutes.js | POST /; GET /continue | auth |
-| reportRoutes.js | POST /; GET /open; PUT /:id/resolve | auth; resolve = staff/admin |
-| feedRoutes.js | GET / | auth |
-| searchRoutes.js | GET / | public + general limiter |
-| statsRoutes.js | GET / | public + general limiter |
+| authRoutes | POST /signup, /login, /logout; GET /me; POST /forgot-password, /reset-password | public + auth rate-limit; /me protected |
+| comicRoutes | GET /, /mine, /:id; POST /, /:id/chapters; PUT /:id/submit | reads public; writes author/admin; chapters/submit owner-checked |
+| scriptRoutes | GET /, /mine, /:id; POST /; PUT /:id/submit | same model as comics |
+| authorRoutes | GET /, /:id; PUT /me, /me/upgrade | reads public; /me scoped |
+| adminRoutes | GET /comics/pending; PUT /comics/:id/review; GET /scripts/pending; PUT /scripts/:id/review | protect + requireRole('admin') router-wide |
+| commentRoutes | GET /comic/:comicId; POST /; DELETE /:id | reads public; writes protected; delete owner/admin |
+| contactRoutes | POST / | public + limiters |
+| bookmarkRoutes | POST /toggle; GET /mine | protected router-wide |
+| ratingRoutes | POST /; GET /comic/:comicId | write protected; read optionalAuth |
+| likeRoutes | POST /toggle; GET /status | write protected; read optionalAuth |
+| followRoutes | GET /count/:authorId; POST /toggle; GET /status/:authorId | writes protected |
+| notificationRoutes | GET /; PUT /mark-read | protected router-wide |
+| readingHistoryRoutes | POST /; GET /continue | protected router-wide |
+| reportRoutes | POST /; GET /open; PUT /:id/resolve | POST protected; /open + resolve admin |
+| feedRoutes | GET / | protected |
+| searchRoutes | GET / | public |
+| statsRoutes | GET / | public |
+| server.js | GET /api/health (public); `/api` catch-all 404; error middleware | - |
 
-Plus: `GET /api/health` (public), catch-all `/api` → `404 { message: 'Route not found' }`, error middleware. Method/validation/ownership/error-safety audited per route; no secrets or sensitive fields in any response; rate-limit tiers applied per §14.
+Per-route audit: auth where required, ownership where scoped, validation, safe queries, clean errors, no sensitive fields in responses - all verified in the matrix. **Missing:** comic/script edit and delete endpoints (M-2).
 
 ---
 
 ## 9. Admin
 
-- **Entry points:** only `adminRoutes.js` (all four handlers mounted in a single router behind `requireRole('admin')`).
-- **Verification:** `protect` + `requireRole('admin')` confirmed server-side for `/comics/pending`, `/comics/:id/review`, `/scripts/pending`, `/scripts/:id/review`. A normal user (reader/author) calling these receives 403 (tested in the matrix).
-- **Role escalation:** signup coerces any requested `admin` role to `reader`; no endpoint accepts a role change to admin (only reader→author upgrade exists). Tested: sending `role: 'admin'` does not create an admin.
-- **Limitation:** no admin account exists in the environment, so an end-to-end admin review flow could not be executed; protection is code-verified only (Task 5 → PARTIALLY COMPLETE).
+- All four admin handlers behind `router.use(protect, requireRole('admin'))` (`adminRoutes.js`); report resolution (`GET /reports/open`, `PUT /reports/:id/resolve`) likewise admin-gated.
+- Role escalation blocked (verified: self-requested admin coerced to reader; reader -> admin endpoints 403).
+- **Emptiness constraint:** no admin account can be created via the public API and none exists in the DB, so the admin review + publish/publishFiles flows could not be exercised end-to-end (CANNOT VERIFY); behavior is server-side code-verified only.
 
 ---
 
-## 10. Build/Test Results
+## 10. Build / Test
 
-Exact commands and results (run in the working tree, Node v22.16.0):
-
-| Command | Result |
-|---------|--------|
-| `npm run lint` (root) | **Clean** — "No ESLint warnings or errors". Note: `next lint` prints a deprecation notice (removed in Next 16 — future migration to ESLint CLI, P2). |
-| `npm run build` (root) | **Success** — Next **15.5.25**; 22 routes built (static `○` + dynamic `ƒ`), including `/robots.txt` and `/sitemap.xml`; First Load JS shared **103 kB**; no errors/warnings. |
-| `npm audit --omit=dev` (root) | **found 0 vulnerabilities** |
-| `npm audit` (backend) | **found 0 vulnerabilities** |
-| typecheck | N/A — no `typecheck` script exists (JS project). |
-| tests | N/A — no test suite exists. |
-| Live 24-case security matrix | **24/24 PASS** (rate-limit 429, CORS allow/deny, profile/ownership 403s, media traversal 404s, private-media 404 without signature/session, signed-URL success, cookie flags, header set, cross-user submit 403, admin-role coercion). One high bug found and fixed during this matrix (signed-URL deep-copy corruption), regression-passing. |
-| Playwright UI sweep | Home/comics/login/signup at 320/375/390/414/768/1024/1280/1440 — no horizontal overflow; only console error is the missing `favicon.ico`. |
-| Functional UI probes | Signup (throwaway) → session set → authenticated navbar; `/dashboard` unauth → client gate + server 401/403; logout clears cookie (raw header verified); SEO metadata evaluated on the current production build (title/description/OG/robots present). |
-| Test cleanup | All verification accounts/media removed after testing; 0 leftover test users. |
+- `npm run lint` (root): clean (Next 15.5.25; `next lint` deprecated - migrate to ESLint CLI, P2).
+- `npm run build`: success - 27 routes generated, incl. `/robots.txt` and `/sitemap.xml`; no blocking errors/warnings.
+- `npm audit --omit=dev` (root): 0 vulnerabilities. `npm audit` (backend): 0 vulnerabilities. `overrides` pin `qs`/`postcss`.
+- Live probes: `/` 200 with new security headers; `/robots.txt` 200; `/sitemap.xml` 200; every `/api/*` -> 500 (C-1).
+- No automated test suite or typecheck script currently exists (recorded for the record, not a defect).
 
 ---
 
 ## 11. Remaining Work
 
-### P0 — Must fix before production
-1. **Repair the Vercel serverless bridge** — add `module.exports = app` to `backend/server.js` (guard `app.listen` with `require.main === module`) so `api/index.js` exports a real handler; then deploy and verify `/api/health`, `/api/comics`, and `/uploads/...` on Vercel (H-1).
-2. **Commit the working tree and redeploy** — large volumes of current work are uncommitted/untracked (security headers in `next.config.js`, media gate, `app/robots.js`, `app/sitemap.js`, `app/search/`, `searchRoutes`/`statsRoutes` + controllers, `Media.js`, `app/error.js`, etc.). The live site is a stale snapshot missing all of it; a plain `git push` would still deploy the old code.
-3. **Provision real secrets on Vercel** — `JWT_SECRET` (≥32 random chars), optional `MEDIA_SIGNING_SECRET`, `CLIENT_URL`, and confirmed `NODE_ENV=production` (the boot guard refuses example secrets) (M-2).
-4. **Move media to persistent object storage** (Azure Blob/S3 or a persistent Vercel-compatible store) with the existing signed-URL layer; local disk is ephemeral on serverless (H-2).
-5. **Wire a real email service** for password reset (currently console-only) (M-1).
+### P0 (blocking release)
+- **Provision Vercel environment variables** in Vercel project settings: `MONGO_URI` (Atlas `tb-creation`), `JWT_SECRET` (>= 32 random chars, same as local), `MEDIA_SIGNING_SECRET`; redeploy; confirm `/api/health` -> 200 (C-1).
+- **Remove the hard `process.exit(1)` calls** so a missing/weak env on a serverless cold start returns a clean JSON error (e.g. 500 `{ message }`) via the error middleware instead of killing the whole function (otherwise one bad env takes down every route).
+- **Swap local-disk media storage to persistent object storage** (S3-compatible / Azure Blob) behind the existing signed-URL layer (H-1).
+- **Wire a real email provider** (Resend/SendGrid/SES/et al.) for password-reset (and optionally verification) delivery; stop printing reset URLs in non-prod logs (M-1).
+- **Restore `backend/.env`** to the Atlas URI + a real generated secret so the local backend runs again (M-4).
+- **Rotate the Atlas DB user password** (credentials were shared in plaintext chat) (M-5).
 
-### P1 — Should fix soon
-- Add `canonical` URLs and an `og:image` / favicon (`favicon.ico` currently 404).
-- Clean up rejected-upload temp files (fs unlink on filter reject).
-- Server-side comment-length cap; add `select: false` (or lean projection) to `User.password`.
-- Set `poweredByHeader: false` for Next.
-- Add/seed an admin account (dev) and run an end-to-end admin review test for the record.
-- Restart/refresh the local `:3000` dev instance so it runs the current frontend (stale instance reintroduces JS-visible cookie behavior).
+### P1 (before feature rollout)
+- Add comic/script **edit and delete** endpoints (+ UI) to close the creator lifecycle gap (M-2).
+- Add an admin bootstrap path and seed at least one approved comic + one author + one reader so content flows are testable; only then can reader chapter rendering, prev/next, and the admin review flow be verified (M-3).
+- Fix navbar overflow at 320/375px (L-1).
+- Set `poweredByHeader: false` (L-2).
+- Make array/object query params return 400 instead of 500 (L-4).
+- Unlink orphan temp files on multer filter-reject (L-5).
+- Remove the stale `frontend/` duplicate tree and `backend/models/File.js` (L-9).
 
-### P2 — Future improvement
-- Remove the stale duplicate `frontend/` app and unused `backend/models/File.js` (dead code).
-- Add DB indexes for hot queries (comics by `status`+`date`, comments by `comic`, bookmarks by `user`) once data exists and decide the resource/ownership model for analytics/stats.
-- Reader image loading/prev-next verification needs seeded approved content; add a seed script.
-- Introduce a test suite (none exists) and migrate `next lint` → ESLint CLI.
-- Continue rate-limit tuning as traffic grows (headers already emitted by `express-rate-limit`).
+### P2 (polish)
+- Implement email verification (auth completeness).
+- Add canonical URLs + dynamic routes in `sitemap.js` (L-7).
+- Add `favicon.ico` (L-8).
+- Stop `sitemap.js` recomputing `lastModified` per request.
+- Add `next/dynamic` lazy boundaries for heavy client modules.
+- Add `select: false` for `User.password` at schema level (L-3).
+- Migrate linting to the ESLint CLI (`next lint` removal coming in Next 16).
+- Ensure `/signup?role=author` selection is honored or retarget the CTA (L-6).
+- Guard reset-URL logging to production-only (L-10); allow owners to preview scheduled chapters (L-11).
 
 ---
 
 ## 12. Files Reviewed
 
-- `backend/server.js` (rate limiter tiers, CORS allowlist, helmet, JWT prod guard, media gate mount, route mounts, async error wrapper, no `module.exports`)
-- `api/index.js`, `vercel.json` (bridge + rewrites for `/api/(.*)` and `/uploads/(.*)`)
-- `next.config.js` (all security headers + prod-only CSP; `images.remotePatterns` limited)
-- `backend/controllers/authController.js` (cookie options, role allowlist, reset flow), `backend/utils/httpError.js`
-- `backend/middleware/auth.js`, `backend/middleware/serveMedia.js`, `backend/middleware/upload.js`
-- `backend/utils/signMedia.js`, `backend/utils/mediaAccess.js`, `backend/models/Media.js` + all other models
-- All 14 files under `backend/routes/` + corresponding controllers (ownership/validation audit)
-- `app/layout.js`, `app/page.js`, `app/robots.js`, `app/sitemap.js`, `app/error.js`, `app/search/page.js`, and the dynamic pages (`comics/[id]`, `.../read/[chapter]`, `scripts/[id]`, `authors/[id]`)
-- `lib/AuthContext.js`, `lib/api.js`, `lib/server-data.js`; `components/` (incl. `JsonLd.js`, upload forms)
-- `package.json`, lockfiles; `backend/.env.example` (only the example — `.env` credentials never printed)
-- Git history (`git log --all`, `git log --diff-filter=A`, `git show` on key commits) for secret/deploy provenance
-- Live probes: homepage, `/robots.txt`, `/sitemap.xml`, `/api/health`, `/api/comics`, `/api/stats` (404 — confirms stale deploy), response headers
+- **Backend:** `server.js`, middleware/express setup, `config/db.js`, `config/*`, `api/index.js` (serverless bridge), `vercel.json`, `next.config.js`, `backend/.env` (state audit only), `.env.example` variants.
+- **Middleware/utils:** `middleware/auth.js`, `middleware/upload.js`, `middleware/serveMedia.js`, error-handler middleware, `utils/signMedia.js`, `utils/mediaAccess.js`, `utils/decorateComics.js`, `utils/httpError.js`.
+- **Controllers (all ~17):** auth, comic, script, author, admin, comment, bookmark, like, follow, rating, notification, readingHistory, report, contact, feed, search, stats.
+- **Routes (all 17):** `backend/routes/*.js`.
+- **Models (all):** User, Media, Comic, Chapter, Script, Comment (+ likes/follows/bookmarks/ratings/notifications/history/reports/contact models); `File.js` verified dead.
+- **Frontend/Next:** `app/layout.js`, `app/sitemap.js`, `app/robots.js`, `components/ui/JsonLd.js`, `lib/api.js`, `lib/site.js`, `next.config.js` (server components, client modules, hooks, metadata).
+- **Live artifacts inspected:** deployed HTML headers/CSP, `/robots.txt`, `/sitemap.xml`, `/api/*` responses, console/network logs, Playwright viewports 320/375/390/768/1024/1440.
 
 ---
 
 ## 13. Recommended Next Action
 
-**Ship nothing to production until the P0 deploy-readiness items are done.** Based only on the evidence:
+1. **Fix the live API first.** In Vercel project settings add `MONGO_URI`, `JWT_SECRET` (>= 32 chars), and `MEDIA_SIGNING_SECRET`; then convert the `process.exit(1)` guards in `backend/server.js` and `backend/config/db.js` to throw through the error middleware (a single cold-start failure must not 500 every route); redeploy and confirm `GET /api/health` -> 200 and `GET /api/comics` -> 200 JSON.
+2. Then restore `backend/.env` for local dev, rotate the Atlas password, and re-run the local 26-case matrix to confirm no regressions.
+3. After the API is green, address storage persistence (H-1: move uploads to object storage) before allowing real user uploads.
+4. Assign each P0/P1 finding a fix owner; re-run the matrix + a Playwright sweep at 320/375/390 px once responsive fixes land.
 
-1. **First, fix H-1** (`module.exports` in `backend/server.js` + guard the listener), then **commit the entire working tree** including the untracked files, then **deploy once** and re-run the 24-case matrix against `https://tb-creation.vercel.app/` (health, comics list, search, stats, robots/sitemap, headers, cookie flags, signed uploads). That single deploy will simultaneously surface any remaining gap between the working tree and Vercel's environment.
-2. **Then** implement persistent media storage (H-2) and email delivery for password reset (M-1) — both are production blockers independent of the deploy.
-3. After the matrix passes on the live URL, exercise the content lifecycle (create → chapter → submit → admin review → publish → read/prev-next) with seeded data, since those flows are the only "CANNOT VERIFY" items left.
+---
 
-Verification is complete. **No application code was changed** to produce this report — the fixes for §11 are pending your decision.
+*End of report. Prepared 21 Sep 2026. No application code was changed in producing this report; all verification artifacts (temp harness scripts) were kept outside the repository.*
