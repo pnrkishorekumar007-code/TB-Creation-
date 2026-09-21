@@ -6,6 +6,7 @@ const Report = require('../models/Report');
 const mongoose = require('mongoose');
 const { registerMedia, deleteMedia } = require('../utils/mediaAccess');
 const { signPayloadMedia } = require('../utils/signMedia');
+const { asString, asPage } = require('../utils/queryParams');
 
 const createScript = async (req, res) => {
   try {
@@ -118,13 +119,14 @@ const deleteScript = async (req, res) => {
 
 const getScripts = async (req, res) => {
   try {
-    const { genre, search, page = 1, limit = 20 } = req.query;
+    const genre = asString(req.query.genre, 'genre');
+    const search = asString(req.query.search, 'search');
     const filter = { approvalStatus: 'approved' };
-    if (genre) filter.genre = String(genre);
+    if (genre) filter.genre = genre;
     if (search) filter.$text = { $search: search };
 
-    const pageNum = Math.max(parseInt(page) || 1, 1);
-    const limitNum = Math.min(parseInt(limit) || 20, 50);
+    const pageNum = asPage(req.query.page, 1);
+    const limitNum = asPage(req.query.limit, 20, 50);
 
     const [scripts, total] = await Promise.all([
       Script.find(filter)

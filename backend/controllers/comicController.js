@@ -13,6 +13,7 @@ const mongoose = require('mongoose');
 const { decorateComics } = require('../utils/decorateComics');
 const { registerMedia, publishFiles, deleteMedia } = require('../utils/mediaAccess');
 const { signPayloadMedia } = require('../utils/signMedia');
+const { asString, asPage } = require('../utils/queryParams');
 
 const escapeRegex = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
@@ -149,12 +150,15 @@ const deleteComic = async (req, res) => {
 
 const getComics = async (req, res) => {
   try {
-    const { genre, status, search, sort, page = 1, limit = 20 } = req.query;
+    const genre = asString(req.query.genre, 'genre');
+    const status = asString(req.query.status, 'status');
+    const search = asString(req.query.search, 'search');
+    const sort = asString(req.query.sort, 'sort');
     const filter = { approvalStatus: 'approved' };
     // Coerce to plain strings so Mongo never interprets an attacker-supplied
     // object (e.g. {$ne: null}) as a query operator.
-    if (genre && genre !== 'All') filter.genre = String(genre);
-    if (status && status !== 'All') filter.status = String(status);
+    if (genre && genre !== 'All') filter.genre = genre;
+    if (status && status !== 'All') filter.status = status;
     if (search) {
       const safe = escapeRegex(search);
       filter.$or = [
@@ -164,8 +168,8 @@ const getComics = async (req, res) => {
       ];
     }
 
-    const pageNum = Math.max(parseInt(page) || 1, 1);
-    const limitNum = Math.min(parseInt(limit) || 20, 50);
+    const pageNum = asPage(req.query.page, 1);
+    const limitNum = asPage(req.query.limit, 20, 50);
 
     let sortOption = { createdAt: -1 };
     if (sort === 'popular' || sort === 'views') sortOption = { views: -1 };

@@ -1,4 +1,5 @@
 const { serverError } = require('../utils/httpError');
+const { asString } = require('../utils/queryParams');
 const Comic = require('../models/Comic');
 const Script = require('../models/Script');
 const User = require('../models/User');
@@ -7,7 +8,7 @@ const escapeRegex = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 const searchAll = async (req, res) => {
   try {
-    const raw = (req.query.q || '').trim();
+    const raw = (asString(req.query.q, 'q') || '').trim();
     if (!raw) return res.json({ comics: [], scripts: [], creators: [] });
 
     const regex = new RegExp(escapeRegex(raw), 'i');
