@@ -1,7 +1,10 @@
 const { serverError } = require('../utils/httpError');
 const Script = require('../models/Script');
+const Like = require('../models/Like');
+const Bookmark = require('../models/Bookmark');
+const Report = require('../models/Report');
 const mongoose = require('mongoose');
-const { registerMedia } = require('../utils/mediaAccess');
+const { registerMedia, deleteMedia } = require('../utils/mediaAccess');
 const { signPayloadMedia } = require('../utils/signMedia');
 
 const createScript = async (req, res) => {
@@ -47,6 +50,67 @@ const submitScriptForReview = async (req, res) => {
     script.approvalStatus = 'pending';
     await script.save();
     res.json(await signPayloadMedia(script.toObject()));
+  } catch (err) {
+    serverError(res, err);
+  }
+};
+
+const updateScript = async (req, res) => {
+  try {
+    const script = await Script.findById(req.params.id);
+    if (!script) return res.status(404).json({ message: 'Script not found' });
+    if (String(script.author) !== String(req.user._id) && req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Not your script' });
+    }
+
+    const { title, synopsis, genre } = req.body;
+    if (title !== undefined) script.title = title.toString().trim() || script.title;
+    if (synopsis !== undefined) script.synopsis = synopsis.toString();
+    if (genre !== undefined) script.genre = genre.toString();
+
+    if (req.file) {
+      const oldFile = script.fileUrl;
+      const newFile = `/uploads/scripts/${req.file.filename}`;
+      script.fileUrl = newFile;
+      await registerMedia({
+        file: newFile,
+        owner: req.user._id,
+        kind: 'script',
+        ref: String(script._id),
+        public: false,
+      });
+      if (oldFile) await deleteMedia([oldFile]);
+    }
+
+    // Same re-review rule as comics: any edit of approved/pending content
+    // resets to a draft so an admin must approve the new version.
+    if (script.approvalStatus === 'approved' || script.approvalStatus === 'pending') {
+      script.approvalStatus = 'draft';
+    }
+
+    await script.save();
+    res.json(await signPayloadMedia(script.toObject()));
+  } catch (err) {
+    serverError(res, err);
+  }
+};
+
+const deleteScript = async (req, res) => {
+  try {
+    const script = await Script.findById(req.params.id);
+    if (!script) return res.status(404).json({ message: 'Script not found' });
+    if (String(script.author) !== String(req.user._id) && req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Not your script' });
+    }
+
+    // Cascade: remove social rows and reports referencing this script.
+    await Like.deleteMany({ script: script._id });
+    await Bookmark.deleteMany({ script: script._id });
+    await Report.deleteMany({ targetType: 'script', targetId: script._id });
+    await deleteMedia([script.fileUrl]);
+    await Script.deleteOne({ _id: script._id });
+
+    res.json({ message: 'Script deleted' });
   } catch (err) {
     serverError(res, err);
   }
@@ -112,4 +176,4 @@ const getMyScripts = async (req, res) => {
   }
 };
 
-module.exports = { createScript, submitScriptForReview, getScripts, getScriptById, getMyScripts };
+module.exports = { createScript, submitScriptForReview, updateScript, deleteScript, getScripts, getScriptById, getMyScripts };

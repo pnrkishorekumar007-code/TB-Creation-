@@ -1,11 +1,17 @@
 const { serverError } = require('../utils/httpError');
 const Comic = require('../models/Comic');
 const Chapter = require('../models/Chapter');
+const Comment = require('../models/Comment');
+const Like = require('../models/Like');
+const Bookmark = require('../models/Bookmark');
+const Rating = require('../models/Rating');
+const ReadingHistory = require('../models/ReadingHistory');
+const Report = require('../models/Report');
 const Follow = require('../models/Follow');
 const Notification = require('../models/Notification');
 const mongoose = require('mongoose');
 const { decorateComics } = require('../utils/decorateComics');
-const { registerMedia, publishFiles } = require('../utils/mediaAccess');
+const { registerMedia, publishFiles, deleteMedia } = require('../utils/mediaAccess');
 const { signPayloadMedia } = require('../utils/signMedia');
 
 const escapeRegex = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -59,6 +65,83 @@ const submitComicForReview = async (req, res) => {
     comic.approvalStatus = 'pending';
     await comic.save();
     res.json(await signPayloadMedia(comic.toObject()));
+  } catch (err) {
+    serverError(res, err);
+  }
+};
+
+const updateComic = async (req, res) => {
+  try {
+    const comic = await Comic.findById(req.params.id);
+    if (!comic) return res.status(404).json({ message: 'Comic not found' });
+    if (String(comic.author) !== String(req.user._id) && req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Not your comic' });
+    }
+
+    const { title, description, genre, tags, status } = req.body;
+    if (title !== undefined) comic.title = title.toString().trim() || comic.title;
+    if (description !== undefined) comic.description = description.toString();
+    if (genre !== undefined) comic.genre = genre.toString();
+    if (tags !== undefined) {
+      comic.tags = tags.toString().split(',').map((t) => t.trim()).filter(Boolean);
+    }
+    if (status !== undefined) comic.status = status;
+
+    if (req.file) {
+      const oldCover = comic.coverUrl;
+      const newCover = `/uploads/covers/${req.file.filename}`;
+      comic.coverUrl = newCover;
+      await registerMedia({
+        file: newCover,
+        owner: req.user._id,
+        kind: 'cover',
+        ref: String(comic._id),
+        public: false,
+      });
+      if (oldCover) await deleteMedia([oldCover]);
+    }
+
+    // Any edit of approved/pending content resets it to a draft that an admin
+    // must re-review, so the public listing can never silently change.
+    if (comic.approvalStatus === 'approved' || comic.approvalStatus === 'pending') {
+      comic.approvalStatus = 'draft';
+    }
+
+    await comic.save();
+    res.json(await signPayloadMedia(comic.toObject()));
+  } catch (err) {
+    serverError(res, err);
+  }
+};
+
+const deleteComic = async (req, res) => {
+  try {
+    const comic = await Comic.findById(req.params.id);
+    if (!comic) return res.status(404).json({ message: 'Comic not found' });
+    if (String(comic.author) !== String(req.user._id) && req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Not your comic' });
+    }
+
+    const chapters = await Chapter.find({ comic: comic._id });
+    const chapterIds = chapters.map((c) => c._id);
+    const pageFiles = chapters.flatMap((c) => c.pageImages || []);
+    const coverFiles = comic.coverUrl ? [comic.coverUrl] : [];
+
+    // Cascade: remove everything that references this comic or its chapters.
+    await Comment.deleteMany({
+      $or: [{ comic: comic._id }, { chapter: { $in: chapterIds } }],
+    });
+    await Like.deleteMany({ comic: comic._id });
+    await Bookmark.deleteMany({ comic: comic._id });
+    await Rating.deleteMany({ comic: comic._id });
+    await ReadingHistory.deleteMany({ comic: comic._id });
+    await Report.deleteMany({ targetType: 'comic', targetId: comic._id });
+    await Chapter.deleteMany({ comic: comic._id });
+
+    await deleteMedia([...coverFiles, ...pageFiles]);
+    await Comic.deleteOne({ _id: comic._id });
+
+    res.json({ message: 'Comic deleted' });
   } catch (err) {
     serverError(res, err);
   }
@@ -229,4 +312,13 @@ const addChapter = async (req, res) => {
   }
 };
 
-module.exports = { createComic, submitComicForReview, getComics, getComicById, getMyComics, addChapter };
+module.exports = {
+  createComic,
+  submitComicForReview,
+  updateComic,
+  deleteComic,
+  getComics,
+  getComicById,
+  getMyComics,
+  addChapter,
+};

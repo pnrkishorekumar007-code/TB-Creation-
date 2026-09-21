@@ -1,4 +1,6 @@
 const crypto = require('crypto');
+const fs = require('fs');
+const path = require('path');
 const Media = require('../models/Media');
 
 // Short-lived capability token. A tokenised URL is only as good as a
@@ -54,6 +56,29 @@ const getMediaPublic = async (file) => {
   return isPublic;
 };
 
+/**
+ * Permanently remove media rows, their cache entries, and (best effort) the
+ * backing files on disk. Used when content (comic/script) is deleted so stale
+ * private files and index rows don't accumulate.
+ */
+const deleteMedia = async (files) => {
+  const list = (files || []).filter((f) => typeof f === 'string' && f.startsWith('/uploads/'));
+  if (list.length === 0) return;
+  for (const file of list) publicCache.delete(file);
+  try {
+    await Media.deleteMany({ file: { $in: list } });
+  } catch (err) {
+    // Best effort; the memory cache is already cleared for this process.
+  }
+  for (const file of list) {
+    try {
+      fs.unlinkSync(path.join(__dirname, '..', file));
+    } catch (e) {
+      // File already gone or on a read-only/ephemeral mount — fine.
+    }
+  }
+};
+
 /** Get the full visibility record (exists? public?) for the /uploads handler. */
 const findMedia = async (file) => {
   const cached = publicCache.get(file);
@@ -90,4 +115,5 @@ module.exports = {
   findMedia,
   signMediaUrl,
   verifyMediaUrl,
+  deleteMedia,
 };

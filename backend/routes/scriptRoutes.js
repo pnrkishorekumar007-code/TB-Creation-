@@ -1,5 +1,5 @@
 const express = require('express');
-const { createScript, submitScriptForReview, getScripts, getScriptById, getMyScripts } = require('../controllers/scriptController');
+const { createScript, submitScriptForReview, updateScript, deleteScript, getScripts, getScriptById, getMyScripts } = require('../controllers/scriptController');
 const { protect, requireRole, optionalAuth } = require('../middleware/auth');
 const { uploadScript, validateScript } = require('../middleware/upload');
 
@@ -9,6 +9,8 @@ router.get('/', getScripts);
 router.get('/mine', protect, requireRole('author', 'admin'), getMyScripts);
 router.get('/:id', optionalAuth, getScriptById);
 router.post('/', protect, requireRole('author', 'admin'), uploadScript.single('file'), validateScript, createScript);
+router.put('/:id', protect, requireRole('author', 'admin'), uploadScript.single('file'), validateScript, updateScript);
 router.put('/:id/submit', protect, requireRole('author', 'admin'), submitScriptForReview);
+router.delete('/:id', protect, requireRole('author', 'admin'), deleteScript);
 
 module.exports = router;
