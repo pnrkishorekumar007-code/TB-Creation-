@@ -58,7 +58,6 @@ You need MongoDB running — either install it locally, or create a free cluster
 
 ### 2. Frontend
 ```bash
-cd frontend
 npm install
 cp .env.local.example .env.local
 npm run dev
@@ -71,17 +70,17 @@ There's no signup option for admin (by design — admins shouldn't self-register
 ## Project Structure
 ```
 tb-creation/
+├── app/               # Next.js App Router pages
+├── components/        # Navbar, Footer, ComicCard, ScriptCard
+├── lib/               # api.js (axios client), AuthContext.js, ThemeContext.js
 ├── backend/
-│   ├── models/        # User, Comic, Chapter, Script, ContactMessage
-│   ├── routes/        # auth, comics, scripts, authors, contact, admin
+│   ├── models/        # User, Comic, Chapter, Script, ContactMessage, Media, ...
+│   ├── routes/        # auth, comics, scripts, authors, contact, admin, ...
 │   ├── controllers/
-│   ├── middleware/     # auth.js (JWT + roles), upload.js (multer)
-│   ├── uploads/         # uploaded files served at /uploads/*
+│   ├── middleware/    # auth.js (JWT + roles), upload.js (multer), serveMedia.js
+│   ├── uploads/       # uploaded files served at /uploads/*
 │   └── server.js
-└── frontend/
-    ├── app/            # Next.js App Router pages
-    ├── components/     # Navbar, Footer, ComicCard, ScriptCard
-    └── lib/             # api.js (axios client), AuthContext.js
+└── api/index.js       # Vercel serverless entry (mounts backend/server)
 ```
 
 ## Next steps (v6 ideas, not yet built)
@@ -95,4 +94,4 @@ tb-creation/
 
 ## Notes
 - Uploaded files are stored locally in `backend/uploads/` — fine for development, but for production, move to Cloudinary, S3, or similar so files survive redeploys.
-- The design uses a manga-inspired dark theme (ink black background, red accent, halftone dot texture, Bangers display font) — all defined in `frontend/tailwind.config.js` and `frontend/app/globals.css`, easy to retheme.
+- The design uses a manga-inspired dark theme (ink black background, red accent, halftone dot texture, Bangers display font) — all defined in `tailwind.config.js` and `app/globals.css`, easy to retheme.
