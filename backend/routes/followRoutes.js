@@ -1,10 +1,11 @@
 const express = require('express');
-const { toggleFollow, getFollowStatus } = require('../controllers/followController');
+const { toggleFollow, getFollowStatus, getFollowCounts } = require('../controllers/followController');
 const { protect } = require('../middleware/auth');
 
 const router = express.Router();
-router.use(protect);
-router.post('/toggle', toggleFollow);
-router.get('/status/:authorId', getFollowStatus);
+
+router.get('/count/:authorId', getFollowCounts);
+router.post('/toggle', protect, toggleFollow);
+router.get('/status/:authorId', protect, getFollowStatus);
 
 module.exports = router;

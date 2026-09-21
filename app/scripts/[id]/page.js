@@ -1,52 +1,47 @@
-'use client';
+import { notFound } from 'next/navigation';
+import { fetchApi } from '../../../lib/server-data';
+import { absoluteUrl } from '../../../lib/site';
+import ScriptDetail from '../../../components/ScriptDetail';
+import JsonLd from '../../../components/ui/JsonLd';
 
-import { useEffect, useState } from 'react';
-import Link from 'next/link';
-import { useParams } from 'next/navigation';
-import api from '../../../lib/api';
-import BookmarkButton from '../../../components/BookmarkButton';
-import FollowButton from '../../../components/FollowButton';
-import LikeButton from '../../../components/LikeButton';
+export const dynamic = 'force-dynamic';
 
-const API_BASE = (process.env.NEXT_PUBLIC_API_URL || '/api').replace('/api', '');
+export async function generateMetadata({ params }) {
+  const { id } = await params;
+  const data = await fetchApi(`/scripts/${id}?increment=false`);
+  if (!data) return {};
+  return {
+    title: data.title,
+    description: data.synopsis || `Read the script for "${data.title}" on TB Creation.`,
+    openGraph: {
+      title: data.title,
+      description: data.synopsis,
+      type: 'article',
+      url: absoluteUrl(`/scripts/${data._id}`),
+    },
+  };
+}
 
-export default function ScriptDetailPage() {
-  const { id } = useParams();
-  const [script, setScript] = useState(null);
-  const [notFound, setNotFound] = useState(false);
-
-  useEffect(() => {
-    api.get(`/scripts/${id}`).then((res) => setScript(res.data)).catch(() => setNotFound(true));
-  }, [id]);
-
-  if (notFound) return <p className="max-w-3xl mx-auto px-5 py-10 text-muted">Script not found.</p>;
-  if (!script) return <p className="max-w-3xl mx-auto px-5 py-10 text-muted">Loading...</p>;
+export default async function ScriptDetailPage({ params }) {
+  const { id } = await params;
+  const script = await fetchApi(`/scripts/${id}?increment=false`);
+  if (!script) notFound();
 
   return (
-    <div className="max-w-3xl mx-auto px-5 py-10">
-      <p className="text-accent2 font-display tracking-widest text-sm">{script.genre?.toUpperCase()}</p>
-      <h1 className="font-display text-4xl mt-1">{script.title}</h1>
-      <div className="flex items-center gap-3 mt-1">
-        <Link href={`/authors/${script.author?._id}`} className="text-accent2 text-sm hover:underline">
-          by {script.author?.name}
-        </Link>
-        {script.author?._id && <FollowButton authorId={script.author._id} />}
-      </div>
-      <p className="text-muted mt-4">{script.synopsis}</p>
-      <p className="text-xs text-muted mt-2">{script.views} views</p>
-
-      <div className="flex gap-3 mt-6">
-        <a
-          href={`${API_BASE}${script.fileUrl}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-block px-5 py-3 bg-accent text-ink font-semibold rounded"
-        >
-          Read Script File
-        </a>
-        <BookmarkButton scriptId={script._id} />
-        <LikeButton scriptId={script._id} />
-      </div>
-    </div>
+    <>
+      <JsonLd
+        data={{
+          '@context': 'https://schema.org',
+          '@type': 'CreativeWork',
+          name: script.title,
+          description: script.synopsis,
+          genre: script.genre,
+          url: absoluteUrl(`/scripts/${script._id}`),
+          author: { '@type': 'Person', name: script.author?.name },
+          dateCreated: script.createdAt,
+        }}
+      />
+      <ScriptDetail script={script} />
+    </>
   );
 }

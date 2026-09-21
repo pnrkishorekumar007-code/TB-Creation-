@@ -16,8 +16,8 @@ export default function TermsPage() {
           <p>Creators retain full ownership of everything they upload. By publishing on TB Creation, you grant us a license to host and display your work on the platform — nothing more.</p>
         </section>
         <section>
-          <h2 className="text-paper font-semibold mb-2">3. What You Can't Upload</h2>
-          <p>No content that infringes someone else's copyright, contains hate speech or harassment, or sexualizes minors. Violating this results in removal and possible account termination.</p>
+          <h2 className="text-paper font-semibold mb-2">3. What You Can&apos;t Upload</h2>
+          <p>No content that infringes someone else&apos;s copyright, contains hate speech or harassment, or sexualizes minors. Violating this results in removal and possible account termination.</p>
         </section>
         <section>
           <h2 className="text-paper font-semibold mb-2">4. Reporting & Moderation</h2>

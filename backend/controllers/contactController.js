@@ -1,3 +1,4 @@
+const { serverError } = require('../utils/httpError');
 const ContactMessage = require('../models/ContactMessage');
 
 const sendMessage = async (req, res) => {
@@ -9,7 +10,7 @@ const sendMessage = async (req, res) => {
     const saved = await ContactMessage.create({ name, email, message });
     res.status(201).json({ message: 'Message received', id: saved._id });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    serverError(res, err);
   }
 };
 

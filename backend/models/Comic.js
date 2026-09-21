@@ -2,12 +2,12 @@ const mongoose = require('mongoose');
 
 const comicSchema = new mongoose.Schema(
   {
-    title: { type: String, required: true, trim: true },
-    description: { type: String, default: '' },
-    coverUrl: { type: String, default: '' },
+    title: { type: String, required: true, trim: true, maxlength: 120 },
+    description: { type: String, default: '', maxlength: 2000 },
+    coverUrl: { type: String, default: '', maxlength: 300 },
     author: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-    genre: { type: String, default: 'General' },
-    tags: [{ type: String }],
+    genre: { type: String, default: 'General', maxlength: 40 },
+    tags: [{ type: String, maxlength: 20 }],
     status: { type: String, enum: ['ongoing', 'completed'], default: 'ongoing' },
     approvalStatus: { type: String, enum: ['draft', 'pending', 'approved', 'rejected'], default: 'draft' },
     views: { type: Number, default: 0 },

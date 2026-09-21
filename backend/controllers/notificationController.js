@@ -1,3 +1,4 @@
+const { serverError } = require('../utils/httpError');
 const Notification = require('../models/Notification');
 
 const getMyNotifications = async (req, res) => {
@@ -8,7 +9,7 @@ const getMyNotifications = async (req, res) => {
     const unreadCount = await Notification.countDocuments({ user: req.user._id, read: false });
     res.json({ notifications, unreadCount });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    serverError(res, err);
   }
 };
 
@@ -17,7 +18,7 @@ const markAllRead = async (req, res) => {
     await Notification.updateMany({ user: req.user._id, read: false }, { read: true });
     res.json({ message: 'Marked as read' });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    serverError(res, err);
   }
 };
 

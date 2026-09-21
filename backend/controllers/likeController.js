@@ -1,3 +1,4 @@
+const { serverError } = require('../utils/httpError');
 const mongoose = require('mongoose');
 const Like = require('../models/Like');
 const Comic = require('../models/Comic');
@@ -7,12 +8,14 @@ const validateTarget = async (comicId, scriptId) => {
   if (comicId && scriptId) return 'Provide either comicId or scriptId, not both';
   if (comicId) {
     if (!mongoose.isValidObjectId(comicId)) return 'Invalid comic id';
-    if (!(await Comic.findById(comicId))) return 'Comic not found';
+    const comic = await Comic.findById(comicId);
+    if (!comic || comic.approvalStatus !== 'approved') return 'Comic not found';
     return null;
   }
   if (scriptId) {
     if (!mongoose.isValidObjectId(scriptId)) return 'Invalid script id';
-    if (!(await Script.findById(scriptId))) return 'Script not found';
+    const script = await Script.findById(scriptId);
+    if (!script || script.approvalStatus !== 'approved') return 'Script not found';
     return null;
   }
   return 'comicId or scriptId is required';
@@ -37,7 +40,7 @@ const toggleLike = async (req, res) => {
     const count = await Like.countDocuments(countFilter);
     res.json({ liked: !existing, count });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    serverError(res, err);
   }
 };
 
@@ -57,7 +60,7 @@ const getLikeStatus = async (req, res) => {
     }
     res.json({ liked, count });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    serverError(res, err);
   }
 };
 

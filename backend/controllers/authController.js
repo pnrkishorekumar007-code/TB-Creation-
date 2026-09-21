@@ -1,3 +1,4 @@
+const { serverError } = require('../utils/httpError');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
@@ -5,6 +6,23 @@ const User = require('../models/User');
 
 const signToken = (id) =>
   jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '30d' });
+
+const TOKEN_COOKIE = 'tb_token';
+const TOKEN_COOKIE_OPTIONS = {
+  httpOnly: true,
+  sameSite: 'lax',
+  secure: process.env.NODE_ENV === 'production',
+  maxAge: 30 * 24 * 60 * 60 * 1000,
+  path: '/',
+};
+
+const setTokenCookie = (res, token) => {
+  res.cookie(TOKEN_COOKIE, token, TOKEN_COOKIE_OPTIONS);
+};
+
+const clearTokenCookie = (res) => {
+  res.clearCookie(TOKEN_COOKIE, { ...TOKEN_COOKIE_OPTIONS, maxAge: undefined });
+};
 
 const serializeUser = (user) => ({
   id: user._id,
@@ -37,37 +55,44 @@ const signup = async (req, res) => {
 
     const user = await User.create({ name, email: email.toLowerCase(), password: hashed, role: allowedRole });
     const token = signToken(user._id);
+    setTokenCookie(res, token);
 
     res.status(201).json({
       token,
       user: serializeUser(user),
     });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    serverError(res, err);
   }
 };
 
 const login = async (req, res) => {
   try {
     const { email, password } = req.body;
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email: String(email || '').toLowerCase() });
     if (!user) return res.status(401).json({ message: 'Invalid credentials' });
 
     const match = await bcrypt.compare(password, user.password);
     if (!match) return res.status(401).json({ message: 'Invalid credentials' });
 
     const token = signToken(user._id);
+    setTokenCookie(res, token);
     res.json({
       token,
       user: serializeUser(user),
     });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    serverError(res, err);
   }
 };
 
 const me = async (req, res) => {
   res.json({ user: serializeUser(req.user) });
+};
+
+const logout = async (req, res) => {
+  clearTokenCookie(res);
+  res.json({ message: 'Logged out' });
 };
 
 const forgotPassword = async (req, res) => {
@@ -88,16 +113,20 @@ const forgotPassword = async (req, res) => {
 
     const resetUrl = `${process.env.CLIENT_URL || 'http://localhost:3000'}/reset-password/${rawToken}`;
 
-    // No email service is configured yet — log the link so it's usable in development.
-    // Wire this to a real provider (SendGrid, Postmark, SES, etc.) before going to production.
-    console.log(`Password reset requested for ${user.email}: ${resetUrl}`);
+    // No email service is configured yet — log the link only outside
+    // production (server logs are a sensitive place for reset credentials).
+    // Wire this to a real provider (SendGrid, Postmark, SES, etc.) before
+    // going to production.
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`Password reset requested for ${user.email}: ${resetUrl}`);
+    }
 
     res.json({
       message: 'If that email is registered, a reset link has been sent.',
       devResetUrl: process.env.NODE_ENV === 'production' ? undefined : resetUrl,
     });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    serverError(res, err);
   }
 };
 
@@ -128,8 +157,8 @@ const resetPassword = async (req, res) => {
 
     res.json({ message: 'Password updated. You can now log in.' });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    serverError(res, err);
   }
 };
 
-module.exports = { signup, login, me, forgotPassword, resetPassword, serializeUser };
+module.exports = { signup, login, me, logout, forgotPassword, resetPassword, serializeUser };

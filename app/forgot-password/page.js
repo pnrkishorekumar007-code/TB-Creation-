@@ -24,7 +24,7 @@ export default function ForgotPasswordPage() {
   return (
     <div className="max-w-md mx-auto px-5 py-16">
       <h1 className="font-display text-3xl mb-2">Forgot Password</h1>
-      <p className="text-muted mb-8">Enter your email and we'll send a reset link.</p>
+      <p className="text-muted mb-8">Enter your email and we&apos;ll send a reset link.</p>
 
       {status === 'sent' ? (
         <div className="ink-card rounded-lg p-6">
@@ -32,7 +32,7 @@ export default function ForgotPasswordPage() {
           {devUrl && (
             <div className="mt-4 pt-4 border-t border-white/10">
               <p className="text-xs text-muted mb-2">
-                Dev mode — no email service is configured yet, so here's your reset link directly:
+                Dev mode — no email service is configured yet, so here&apos;s your reset link directly:
               </p>
               <Link href={devUrl.replace(/^https?:\/\/[^/]+/, '')} className="text-accent text-sm hover:underline break-all">
                 {devUrl}

@@ -1,11 +1,13 @@
 const express = require('express');
-const { getAuthorProfile, updateMyProfile } = require('../controllers/authorController');
+const { getAuthorProfile, getAuthors, updateMyProfile, upgradeToAuthor } = require('../controllers/authorController');
 const { protect } = require('../middleware/auth');
-const { uploadAvatar } = require('../middleware/upload');
+const { uploadAvatar, validateImages } = require('../middleware/upload');
 
 const router = express.Router();
 
+router.get('/', getAuthors);
 router.get('/:id', getAuthorProfile);
-router.put('/me', protect, uploadAvatar.single('avatar'), updateMyProfile);
+router.put('/me', protect, uploadAvatar.single('avatar'), validateImages, updateMyProfile);
+router.put('/me/upgrade', protect, upgradeToAuthor);
 
 module.exports = router;

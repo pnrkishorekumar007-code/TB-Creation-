@@ -6,7 +6,7 @@ export default function NotFound() {
       <p className="font-display text-7xl text-accent mb-2">404</p>
       <h1 className="font-display text-2xl mb-3 uppercase">Page Not Found</h1>
       <p className="text-muted mb-8">
-        This page doesn't exist — maybe the comic was removed, or the link's outdated.
+        This page doesn&apos;t exist — maybe the comic was removed, or the link&apos;s outdated.
       </p>
       <div className="flex justify-center gap-3">
         <Link href="/" className="px-5 py-3 bg-accent text-ink font-semibold rounded-md glow-btn">

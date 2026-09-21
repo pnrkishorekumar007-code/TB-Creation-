@@ -1,5 +1,8 @@
+const { serverError } = require('../utils/httpError');
 const Script = require('../models/Script');
 const mongoose = require('mongoose');
+const { registerMedia } = require('../utils/mediaAccess');
+const { signPayloadMedia } = require('../utils/signMedia');
 
 const createScript = async (req, res) => {
   try {
@@ -16,9 +19,18 @@ const createScript = async (req, res) => {
       approvalStatus: publish === 'true' ? 'pending' : 'draft',
     });
 
-    res.status(201).json(script);
+    // Script files start private until the script is approved.
+    await registerMedia({
+      file: script.fileUrl,
+      owner: req.user._id,
+      kind: 'script',
+      ref: String(script._id),
+      public: false,
+    });
+
+    res.status(201).json(await signPayloadMedia(script.toObject()));
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    serverError(res, err);
   }
 };
 
@@ -34,9 +46,9 @@ const submitScriptForReview = async (req, res) => {
     }
     script.approvalStatus = 'pending';
     await script.save();
-    res.json(script);
+    res.json(await signPayloadMedia(script.toObject()));
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    serverError(res, err);
   }
 };
 
@@ -44,7 +56,7 @@ const getScripts = async (req, res) => {
   try {
     const { genre, search, page = 1, limit = 20 } = req.query;
     const filter = { approvalStatus: 'approved' };
-    if (genre) filter.genre = genre;
+    if (genre) filter.genre = String(genre);
     if (search) filter.$text = { $search: search };
 
     const pageNum = Math.max(parseInt(page) || 1, 1);
@@ -61,7 +73,7 @@ const getScripts = async (req, res) => {
 
     res.json({ scripts, total, page: pageNum, pages: Math.ceil(total / limitNum) });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    serverError(res, err);
   }
 };
 
@@ -80,21 +92,23 @@ const getScriptById = async (req, res) => {
       return res.status(404).json({ message: 'Script not found' });
     }
 
-    script.views += 1;
-    await script.save();
+    if (req.query.increment !== 'false') {
+      script.views += 1;
+      await script.save();
+    }
 
-    res.json(script);
+    res.json(await signPayloadMedia(script.toObject()));
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    serverError(res, err);
   }
 };
 
 const getMyScripts = async (req, res) => {
   try {
     const scripts = await Script.find({ author: req.user._id }).sort({ createdAt: -1 });
-    res.json(scripts);
+    res.json(await signPayloadMedia(scripts.map((s) => s.toObject())));
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    serverError(res, err);
   }
 };
 

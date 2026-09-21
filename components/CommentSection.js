@@ -4,18 +4,22 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '../lib/AuthContext';
 import api from '../lib/api';
+import ReportModal from './ReportModal';
 
 export default function CommentSection({ comicId }) {
   const { user } = useAuth();
   const [comments, setComments] = useState([]);
   const [text, setText] = useState('');
   const [posting, setPosting] = useState(false);
+  const [reportTarget, setReportTarget] = useState(null);
 
   const load = () => {
     api.get(`/comments/comic/${comicId}`).then((res) => setComments(res.data));
   };
 
-  useEffect(() => { load(); }, [comicId]);
+  useEffect(() => {
+    api.get(`/comments/comic/${comicId}`).then((res) => setComments(res.data));
+  }, [comicId]);
 
   const submit = async (e) => {
     e.preventDefault();
@@ -33,13 +37,6 @@ export default function CommentSection({ comicId }) {
   const remove = async (id) => {
     await api.delete(`/comments/${id}`);
     load();
-  };
-
-  const report = async (id) => {
-    const reason = window.prompt('Why are you reporting this comment?');
-    if (!reason || !reason.trim()) return;
-    await api.post('/reports', { targetType: 'comment', targetId: id, reason });
-    alert('Thanks — our team will review it.');
   };
 
   return (
@@ -77,7 +74,7 @@ export default function CommentSection({ comicId }) {
                     </button>
                   )}
                   {user && user.id !== c.user?._id && (
-                    <button onClick={() => report(c._id)} className="text-xs text-muted hover:text-accent">
+                    <button onClick={() => setReportTarget(c._id)} className="text-xs text-muted hover:text-accent">
                       Report
                     </button>
                   )}
@@ -88,6 +85,13 @@ export default function CommentSection({ comicId }) {
           ))}
         </div>
       )}
+
+      <ReportModal
+        open={!!reportTarget}
+        onClose={() => setReportTarget(null)}
+        targetType="comment"
+        targetId={reportTarget}
+      />
     </div>
   );
 }

@@ -1,13 +1,17 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
-const protect = async (req, res, next) => {
-  let token;
+const getToken = (req) => {
+  // Prefer the httpOnly session cookie (set at login). Fall back to the
+  // Authorization header for clients/scripts not using cookies.
+  if (req.cookies && req.cookies.tb_token) return req.cookies.tb_token;
   const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) return authHeader.split(' ')[1];
+  return null;
+};
 
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    token = authHeader.split(' ')[1];
-  }
+const protect = async (req, res, next) => {
+  const token = getToken(req);
 
   if (!token) {
     return res.status(401).json({ message: 'Not authorized, no token' });
@@ -33,14 +37,16 @@ const requireRole = (...roles) => (req, res, next) => {
 };
 
 const optionalAuth = async (req, res, next) => {
-  const authHeader = req.headers.authorization;
-  if (authHeader && authHeader.startsWith('Bearer ')) {
+  const token = getToken(req);
+  if (token) {
     try {
-      const decoded = jwt.verify(authHeader.split(' ')[1], process.env.JWT_SECRET);
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
       req.user = await User.findById(decoded.id).select('-password');
     } catch {
       req.user = null;
     }
+  } else {
+    req.user = null;
   }
   next();
 };

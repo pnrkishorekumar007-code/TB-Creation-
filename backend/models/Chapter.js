@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const chapterSchema = new mongoose.Schema(
   {
     comic: { type: mongoose.Schema.Types.ObjectId, ref: 'Comic', required: true },
-    title: { type: String, required: true },
+    title: { type: String, required: true, maxlength: 200 },
     order: { type: Number, required: true },
     pageImages: [{ type: String }],
     publishAt: { type: Date, default: Date.now },

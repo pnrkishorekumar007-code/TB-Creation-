@@ -21,7 +21,13 @@ export default function RatingStars({ comicId }) {
     });
   };
 
-  useEffect(() => { load(); }, [comicId]);
+  useEffect(() => {
+    api.get(`/ratings/comic/${comicId}`).then((res) => {
+      setAverage(res.data.average);
+      setCount(res.data.count);
+      setMyRating(res.data.myRating);
+    });
+  }, [comicId]);
 
   const rate = async (value) => {
     if (!user) {

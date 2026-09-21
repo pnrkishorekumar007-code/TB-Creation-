@@ -1,8 +1,14 @@
+const { serverError } = require('../utils/httpError');
 const Comic = require('../models/Comic');
 const Chapter = require('../models/Chapter');
 const Follow = require('../models/Follow');
 const Notification = require('../models/Notification');
 const mongoose = require('mongoose');
+const { decorateComics } = require('../utils/decorateComics');
+const { registerMedia, publishFiles } = require('../utils/mediaAccess');
+const { signPayloadMedia } = require('../utils/signMedia');
+
+const escapeRegex = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 const createComic = async (req, res) => {
   try {
@@ -22,9 +28,21 @@ const createComic = async (req, res) => {
       approvalStatus: publish === 'true' ? 'pending' : 'draft',
     });
 
-    res.status(201).json(comic);
+    // Covers start private: visible only to the owner/admin (via signed URLs)
+    // until an admin approves the comic.
+    if (comic.coverUrl) {
+      await registerMedia({
+        file: comic.coverUrl,
+        owner: req.user._id,
+        kind: 'cover',
+        ref: String(comic._id),
+        public: false,
+      });
+    }
+
+    res.status(201).json(await signPayloadMedia(comic.toObject()));
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    serverError(res, err);
   }
 };
 
@@ -40,9 +58,9 @@ const submitComicForReview = async (req, res) => {
     }
     comic.approvalStatus = 'pending';
     await comic.save();
-    res.json(comic);
+    res.json(await signPayloadMedia(comic.toObject()));
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    serverError(res, err);
   }
 };
 
@@ -50,28 +68,51 @@ const getComics = async (req, res) => {
   try {
     const { genre, status, search, sort, page = 1, limit = 20 } = req.query;
     const filter = { approvalStatus: 'approved' };
-    if (genre) filter.genre = genre;
-    if (status) filter.status = status;
-    if (search) filter.$text = { $search: search };
-
-    let sortOption = { createdAt: -1 };
-    if (sort === 'popular') sortOption = { views: -1 };
+    // Coerce to plain strings so Mongo never interprets an attacker-supplied
+    // object (e.g. {$ne: null}) as a query operator.
+    if (genre && genre !== 'All') filter.genre = String(genre);
+    if (status && status !== 'All') filter.status = String(status);
+    if (search) {
+      const safe = escapeRegex(search);
+      filter.$or = [
+        { title: { $regex: safe, $options: 'i' } },
+        { genre: { $regex: safe, $options: 'i' } },
+        { tags: { $in: [new RegExp(safe, 'i')] } },
+      ];
+    }
 
     const pageNum = Math.max(parseInt(page) || 1, 1);
     const limitNum = Math.min(parseInt(limit) || 20, 50);
 
-    const [comics, total] = await Promise.all([
-      Comic.find(filter)
-        .sort(sortOption)
-        .skip((pageNum - 1) * limitNum)
-        .limit(limitNum)
-        .populate('author', 'name'),
+    let sortOption = { createdAt: -1 };
+    if (sort === 'popular' || sort === 'views') sortOption = { views: -1 };
+
+    const cursor = Comic.find(filter).populate('author', 'name');
+
+    // "Recently updated" needs chapter data, so decorate first, then sort + slice.
+    if (sort === 'updated') {
+      const all = await cursor.sort({ createdAt: -1 });
+      const decorated = await decorateComics(all);
+      decorated.sort((a, b) => {
+        const at = a.lastChapterAt ? new Date(a.lastChapterAt).getTime() : -Infinity;
+        const bt = b.lastChapterAt ? new Date(b.lastChapterAt).getTime() : -Infinity;
+        return bt - at;
+      });
+      const total = decorated.length;
+      const comics = decorated.slice((pageNum - 1) * limitNum, pageNum * limitNum);
+      return res.json({ comics, total, page: pageNum, pages: Math.ceil(total / limitNum) });
+    }
+
+    const [rawComics, total] = await Promise.all([
+      cursor.sort(sortOption).skip((pageNum - 1) * limitNum).limit(limitNum),
       Comic.countDocuments(filter),
     ]);
 
+    const comics = await decorateComics(rawComics);
+
     res.json({ comics, total, page: pageNum, pages: Math.ceil(total / limitNum) });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    serverError(res, err);
   }
 };
 
@@ -90,10 +131,17 @@ const getComicById = async (req, res) => {
       return res.status(404).json({ message: 'Comic not found' });
     }
 
-    comic.views += 1;
-    await comic.save();
+    if (req.query.increment !== 'false') {
+      comic.views += 1;
+      await comic.save();
+    }
 
     const chapters = await Chapter.find({ comic: comic._id, publishAt: { $lte: new Date() } }).sort({ order: 1 });
+
+    // A scheduled chapter's pages stay private until its publish time arrives.
+    // There is no background job, so promote lazily the moment its chapters are
+    // actually served to readers.
+    await publishFiles(chapters.flatMap((ch) => ch.pageImages || []));
 
     // First chapter is a free preview for everyone. Reading further requires an account.
     const chaptersWithAccess = chapters.map((ch, idx) => {
@@ -104,18 +152,21 @@ const getComicById = async (req, res) => {
       return { ...chObj, locked: false };
     });
 
-    res.json({ comic, chapters: chaptersWithAccess });
+    res.json(await signPayloadMedia({ comic: comic.toObject(), chapters: chaptersWithAccess }));
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    serverError(res, err);
   }
 };
 
 const getMyComics = async (req, res) => {
   try {
-    const comics = await Comic.find({ author: req.user._id }).sort({ createdAt: -1 });
-    res.json(comics);
+    const comics = await Comic.find({ author: req.user._id })
+      .sort({ createdAt: -1 })
+      .populate('author', 'name');
+    const decorated = await decorateComics(comics);
+    res.json(await signPayloadMedia(decorated));
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    serverError(res, err);
   }
 };
 
@@ -143,8 +194,23 @@ const addChapter = async (req, res) => {
       publishAt: publishAt ? new Date(publishAt) : new Date(),
     });
 
+    // Page images follow the chapter's visibility: published chapters' pages
+    // are public, scheduled/draft chapters' pages stay private until read.
+    const publishesNow = !publishAt || new Date(publishAt) <= new Date();
+    await Promise.all(
+      pageImages.map((file) =>
+        registerMedia({
+          file,
+          owner: req.user._id,
+          kind: 'page',
+          ref: String(chapter._id),
+          public: publishesNow,
+        })
+      )
+    );
+
     // Notify followers only if the chapter is publishing immediately
-    if (!publishAt || new Date(publishAt) <= new Date()) {
+    if (publishesNow) {
       const followers = await Follow.find({ author: comic.author });
       if (followers.length > 0) {
         await Notification.insertMany(
@@ -159,7 +225,7 @@ const addChapter = async (req, res) => {
 
     res.status(201).json(chapter);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    serverError(res, err);
   }
 };
 

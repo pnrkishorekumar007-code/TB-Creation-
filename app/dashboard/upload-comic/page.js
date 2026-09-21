@@ -35,7 +35,7 @@ export default function UploadComicPage() {
   return (
     <div className="max-w-xl mx-auto px-5 py-10">
       <h1 className="font-display text-3xl mb-2 uppercase">Upload Comic</h1>
-      <p className="text-muted mb-8">Set up your comic's details. You'll add chapter pages next.</p>
+      <p className="text-muted mb-8">Set up your comic&apos;s details. You&apos;ll add chapter pages next.</p>
 
       <form onSubmit={(e) => e.preventDefault()} className="flex flex-col gap-4">
         <input
@@ -95,7 +95,7 @@ export default function UploadComicPage() {
             {submitting ? 'Submitting...' : 'Submit for Review'}
           </button>
         </div>
-        <p className="text-xs text-muted">Drafts stay private until you submit them. Either way, you'll add chapters next.</p>
+        <p className="text-xs text-muted">Drafts stay private until you submit them. Either way, you&apos;ll add chapters next.</p>
       </form>
     </div>
   );

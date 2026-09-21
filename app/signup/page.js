@@ -58,7 +58,7 @@ export default function SignupPage() {
               checked={form.role === 'reader'}
               onChange={() => setForm({ ...form, role: 'reader' })}
             />
-            I'm a reader
+            I&apos;m a reader
           </label>
           <label className="flex items-center gap-2">
             <input
@@ -66,7 +66,7 @@ export default function SignupPage() {
               checked={form.role === 'author'}
               onChange={() => setForm({ ...form, role: 'author' })}
             />
-            I'm an author
+            I&apos;m an author
           </label>
         </div>
         {error && <p className="text-sm text-accent">{error}</p>}

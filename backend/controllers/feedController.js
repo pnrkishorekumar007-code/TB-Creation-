@@ -1,3 +1,4 @@
+const { serverError } = require('../utils/httpError');
 const Follow = require('../models/Follow');
 const Chapter = require('../models/Chapter');
 const Comic = require('../models/Comic');
@@ -21,7 +22,7 @@ const getMyFeed = async (req, res) => {
 
     res.json(chapters);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    serverError(res, err);
   }
 };
 

@@ -30,7 +30,7 @@ export default function BookmarksPage() {
 
       <h2 className="font-display text-xl mb-3">Continue Reading</h2>
       {history.length === 0 ? (
-        <p className="text-muted text-sm mb-10">Start reading a comic and it'll show up here.</p>
+        <p className="text-muted text-sm mb-10">Start reading a comic and it&apos;ll show up here.</p>
       ) : (
         <div className="flex flex-col gap-2 mb-10">
           {history.map((h) => (

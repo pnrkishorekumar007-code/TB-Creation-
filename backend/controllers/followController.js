@@ -1,3 +1,4 @@
+const { serverError } = require('../utils/httpError');
 const mongoose = require('mongoose');
 const Follow = require('../models/Follow');
 const User = require('../models/User');
@@ -23,7 +24,7 @@ const toggleFollow = async (req, res) => {
     await Follow.create({ follower: req.user._id, author: authorId });
     res.json({ following: true });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    serverError(res, err);
   }
 };
 
@@ -35,8 +36,23 @@ const getFollowStatus = async (req, res) => {
     const existing = await Follow.findOne({ follower: req.user._id, author: req.params.authorId });
     res.json({ following: !!existing });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    serverError(res, err);
   }
 };
 
-module.exports = { toggleFollow, getFollowStatus };
+const getFollowCounts = async (req, res) => {
+  try {
+    if (!mongoose.isValidObjectId(req.params.authorId)) {
+      return res.status(400).json({ message: 'Invalid author id' });
+    }
+    const [followers, following] = await Promise.all([
+      Follow.countDocuments({ author: req.params.authorId }),
+      Follow.countDocuments({ follower: req.params.authorId }),
+    ]);
+    res.json({ followers, following });
+  } catch (err) {
+    serverError(res, err);
+  }
+};
+
+module.exports = { toggleFollow, getFollowStatus, getFollowCounts };

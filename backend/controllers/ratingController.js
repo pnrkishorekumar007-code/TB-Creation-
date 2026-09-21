@@ -1,5 +1,7 @@
+const { serverError } = require('../utils/httpError');
 const mongoose = require('mongoose');
 const Rating = require('../models/Rating');
+const Comic = require('../models/Comic');
 
 const rateComic = async (req, res) => {
   try {
@@ -8,6 +10,13 @@ const rateComic = async (req, res) => {
     if (!comicId || !numValue || numValue < 1 || numValue > 5) {
       return res.status(400).json({ message: 'comicId and a value from 1-5 are required' });
     }
+    if (!mongoose.isValidObjectId(comicId)) {
+      return res.status(400).json({ message: 'Invalid comic id' });
+    }
+    const comic = await Comic.findById(comicId);
+    if (!comic || comic.approvalStatus !== 'approved') {
+      return res.status(404).json({ message: 'Comic not found' });
+    }
     const rating = await Rating.findOneAndUpdate(
       { user: req.user._id, comic: comicId },
       { value: numValue },
@@ -15,7 +24,7 @@ const rateComic = async (req, res) => {
     );
     res.json(rating);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    serverError(res, err);
   }
 };
 
@@ -24,6 +33,10 @@ const getComicRatings = async (req, res) => {
     const { comicId } = req.params;
     if (!mongoose.isValidObjectId(comicId)) {
       return res.status(400).json({ message: 'Invalid comic id' });
+    }
+    const comic = await Comic.findById(comicId);
+    if (!comic || comic.approvalStatus !== 'approved') {
+      return res.status(404).json({ message: 'Comic not found' });
     }
     const stats = await Rating.aggregate([
       { $match: { comic: new (require('mongoose').Types.ObjectId)(comicId) } },
@@ -39,7 +52,7 @@ const getComicRatings = async (req, res) => {
 
     res.json({ average: result.average || 0, count: result.count || 0, myRating });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    serverError(res, err);
   }
 };
 
