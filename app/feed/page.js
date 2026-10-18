@@ -20,7 +20,7 @@ export default function FeedPage() {
 
   return (
     <div className="max-w-4xl mx-auto px-5 py-10">
-      <h1 className="font-display text-3xl mb-2 uppercase">Your Feed</h1>
+      <h1 className="page-title font-display text-4xl tracking-wide mb-2 uppercase">Your Feed</h1>
       <p className="text-muted mb-8">New chapters from authors you follow.</p>
 
       {fetching ? (
@@ -35,7 +35,7 @@ export default function FeedPage() {
             <Link
               key={ch._id}
               href={`/comics/${ch.comic._id}/read/${ch._id}`}
-              className="ink-card rounded px-4 py-3 flex justify-between items-center text-sm"
+              className="row-link rounded px-4 py-3 flex justify-between items-center text-sm"
             >
               <div>
                 <p>{ch.comic.title} — {ch.title}</p>

@@ -38,8 +38,8 @@ function SearchResults() {
   return (
     <div className="max-w-4xl mx-auto px-5 py-10">
       <div className="mb-8">
-        <p className="text-xs uppercase tracking-widest text-accent font-semibold mb-1">Search</p>
-        <h1 className="font-display text-3xl sm:text-4xl mb-2 uppercase">
+        <p className="section-eyebrow mb-2">Search</p>
+        <h1 className="page-title font-display text-4xl sm:text-5xl tracking-wide mb-2 uppercase">
           {q.trim() ? (
             <>
               Results for &quot;<span className="text-accent">{q.trim()}</span>&quot;
@@ -73,7 +73,7 @@ function SearchResults() {
       ) : loading ? (
         <div className="flex flex-col gap-4">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="ink-card rounded-lg p-4 flex items-center gap-4">
+            <div key={i} className="static-card rounded-lg p-4 flex items-center gap-4">
               <div className="w-12 h-12 rounded bg-panel2 skeleton" />
               <div className="flex-1 space-y-2">
                 <div className="h-4 w-1/3 rounded bg-panel2 skeleton" />
@@ -83,11 +83,11 @@ function SearchResults() {
           ))}
         </div>
       ) : error ? (
-        <div className="ink-card rounded-lg p-10 text-center">
+        <div className="static-card rounded-lg p-10 text-center">
           <p className="text-sm text-muted">{error}</p>
         </div>
       ) : total === 0 ? (
-        <div className="ink-card rounded-lg p-10 text-center border-dashed border-paper/10 border">
+        <div className="static-card rounded-lg p-10 text-center border-dashed border-border/10 border">
           <p className="font-display text-xl uppercase mb-2">Nothing found</p>
           <p className="text-sm text-muted">Try a different title, creator, or genre.</p>
         </div>
@@ -124,7 +124,7 @@ function SearchGroup({ title, items, hrefFor, metaFor, imgFor, fallback, round =
           <Link
             key={item._id}
             href={hrefFor(item)}
-            className="ink-card rounded-lg px-4 py-3 flex items-center gap-3 text-sm hover:border-accent/40 transition"
+            className="row-link rounded-lg px-4 py-3 flex items-center gap-3 text-sm hover:border-accent/40 transition"
           >
             <span className={`w-11 h-11 ${round ? 'rounded-full' : 'rounded'} bg-panel2 shrink-0 overflow-hidden flex items-center justify-center relative`}>
               {imgFor(item) ? (

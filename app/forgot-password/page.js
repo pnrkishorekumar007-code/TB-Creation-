@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import api from '../../lib/api';
+import AuthLayout from '../../components/AuthLayout';
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
@@ -22,15 +23,15 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="max-w-md mx-auto px-5 py-16">
-      <h1 className="font-display text-3xl mb-2">Forgot Password</h1>
-      <p className="text-muted mb-8">Enter your email and we&apos;ll send a reset link.</p>
+    <AuthLayout variant="forgot-password">
+      <h1 className="font-display text-3xl mb-1 uppercase">Forgot Password</h1>
+      <p className="text-sm text-muted mb-8">Enter your email and we&apos;ll send a reset link.</p>
 
       {status === 'sent' ? (
-        <div className="ink-card rounded-lg p-6">
+        <div className="static-card rounded-lg p-6">
           <p className="text-sm">If that email is registered, a reset link has been sent.</p>
           {devUrl && (
-            <div className="mt-4 pt-4 border-t border-white/10">
+            <div className="mt-4 pt-4 border-t border-border/10">
               <p className="text-xs text-muted mb-2">
                 Dev mode — no email service is configured yet, so here&apos;s your reset link directly:
               </p>
@@ -48,17 +49,21 @@ export default function ForgotPasswordPage() {
             placeholder="Email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="bg-panel panel-border rounded px-4 py-3 text-sm outline-none focus:border-accent"
+            className="bg-panel panel-border rounded-md px-4 py-3 text-sm outline-none focus:border-accent transition"
           />
-          <button type="submit" disabled={status === 'sending'} className="px-5 py-3 bg-accent text-ink font-semibold rounded disabled:opacity-50">
+          <button
+            type="submit"
+            disabled={status === 'sending'}
+            className="px-5 py-3 bg-accent text-ink font-bold rounded-md glow-btn transition disabled:opacity-50"
+          >
             {status === 'sending' ? 'Sending...' : 'Send Reset Link'}
           </button>
         </form>
       )}
 
-      <p className="text-sm text-muted mt-4">
-        <Link href="/login" className="text-accent hover:underline">Back to log in</Link>
+      <p className="text-sm text-muted mt-5">
+        <Link href="/login" className="text-accent hover:underline font-medium">Back to log in</Link>
       </p>
-    </div>
+    </AuthLayout>
   );
 }

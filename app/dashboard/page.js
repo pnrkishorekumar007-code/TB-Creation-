@@ -9,13 +9,13 @@ import { formatNumber } from '../../lib/site';
 const STATUS_STYLE = {
   draft: 'text-muted',
   pending: 'text-accent2',
-  approved: 'text-green-400',
+  approved: 'text-success',
   rejected: 'text-accent',
 };
 
 function StatCard({ label, value, sub }) {
   return (
-    <div className="ink-card rounded-lg p-5">
+    <div className="static-card rounded-lg p-5">
       <p className="text-[10px] uppercase tracking-widest text-muted font-semibold">{label}</p>
       <p className="font-display text-3xl mt-1">{value}</p>
       {sub && <p className="text-xs text-muted mt-1">{sub}</p>}
@@ -29,11 +29,13 @@ export default function DashboardPage() {
   const [scripts, setScripts] = useState([]);
   const [followers, setFollowers] = useState(null);
   const [loaded, setLoaded] = useState(false);
+  const [error, setError] = useState('');
+  const [busyId, setBusyId] = useState(null);
 
   const load = useCallback(() => {
     if (!user) return;
-    api.get('/comics/mine').then((res) => setComics(res.data)).finally(() => setLoaded(true));
-    api.get('/scripts/mine').then((res) => setScripts(res.data)).finally(() => {});
+    api.get('/comics/mine').then((res) => setComics(res.data)).catch(() => setError('Could not load your comics.')).finally(() => setLoaded(true));
+    api.get('/scripts/mine').then((res) => setScripts(res.data)).catch(() => setError('Could not load your scripts.')).finally(() => {});
     api.get(`/follows/count/${user.id}`).then((res) => setFollowers(res.data.followers)).catch(() => {});
   }, [user]);
 
@@ -43,20 +45,36 @@ export default function DashboardPage() {
   }, [user, load]);
 
   const submitComic = async (id) => {
-    await api.put(`/comics/${id}/submit`);
-    load();
+    setBusyId(id);
+    setError('');
+    try {
+      await api.put(`/comics/${id}/submit`);
+      load();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Could not submit comic for review.');
+    } finally {
+      setBusyId(null);
+    }
   };
 
   const submitScript = async (id) => {
-    await api.put(`/scripts/${id}/submit`);
-    load();
+    setBusyId(id);
+    setError('');
+    try {
+      await api.put(`/scripts/${id}/submit`);
+      load();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Could not submit script for review.');
+    } finally {
+      setBusyId(null);
+    }
   };
 
   if (loading) return null;
   if (!user || (user.role !== 'author' && user.role !== 'admin')) {
     return (
       <div className="max-w-4xl mx-auto px-5 py-10 text-center">
-        <div className="ink-card rounded-lg p-10">
+        <div className="static-card rounded-lg p-10">
           <p className="font-display text-2xl uppercase mb-2">Author access only</p>
           <p className="text-sm text-muted mb-6">
             Publish comics and scripts with a creator account.
@@ -91,19 +109,24 @@ export default function DashboardPage() {
     <div className="max-w-4xl mx-auto px-5 py-10">
       <div className="flex items-center justify-between mb-2 flex-wrap gap-3">
         <div>
-          <p className="text-xs uppercase tracking-widest text-accent font-semibold mb-1">Studio</p>
-          <h1 className="font-display text-3xl uppercase">My Dashboard</h1>
+          <p className="section-eyebrow mb-2">Studio</p>
+          <h1 className="page-title font-display text-4xl tracking-wide uppercase">My Dashboard</h1>
         </div>
         <div className="flex gap-3">
           <Link href="/dashboard/upload-comic" className="px-4 py-2 bg-accent text-ink text-sm font-semibold rounded-md glow-btn transition">
             + Upload Comic
           </Link>
-          <Link href="/dashboard/upload-script" className="px-4 py-2 border border-paper/20 text-sm rounded-md hover:border-accent transition">
+          <Link href="/dashboard/upload-script" className="px-4 py-2 border border-border/20 text-sm rounded-md hover:border-accent transition">
             + Upload Script
           </Link>
         </div>
       </div>
-      <p className="text-sm text-muted mb-8">Welcome back, {user.name}.</p>
+      <p className="text-sm text-muted mb-4">Welcome back, {user.name}.</p>
+      {error && (
+        <p className="text-sm text-accent bg-accent/10 border border-accent/30 rounded px-4 py-2 mb-6">
+          {error}
+        </p>
+      )}
 
       {loaded && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-10">
@@ -115,7 +138,7 @@ export default function DashboardPage() {
 
       <h2 className="font-display text-xl mb-3 uppercase">My Comics</h2>
       {comics.length === 0 ? (
-        <div className="ink-card rounded-lg p-8 text-center mb-8 border-dashed border-paper/10 border">
+        <div className="static-card rounded-lg p-8 text-center mb-8 border-dashed border-border/10 border">
           <p className="text-sm text-muted mb-4">You haven&apos;t uploaded any comics yet.</p>
           <Link href="/dashboard/upload-comic" className="px-4 py-2 bg-accent text-ink text-sm font-semibold rounded-md glow-btn transition">
             Upload your first comic
@@ -124,7 +147,7 @@ export default function DashboardPage() {
       ) : (
         <div className="flex flex-col gap-2 mb-8">
           {comics.map((c) => (
-            <div key={c._id} className="ink-card rounded px-4 py-3 flex justify-between items-center text-sm gap-3 flex-wrap">
+            <div key={c._id} className="row-card rounded px-4 py-3 flex justify-between items-center text-sm gap-3 flex-wrap">
               <div className="min-w-0">
                 <p className="truncate">{c.title}</p>
                 <p className={`text-xs uppercase ${STATUS_STYLE[c.approvalStatus] || 'text-muted'}`}>
@@ -140,8 +163,12 @@ export default function DashboardPage() {
                   </Link>
                 )}
                 {(c.approvalStatus === 'draft' || c.approvalStatus === 'rejected') && (
-                  <button onClick={() => submitComic(c._id)} className="text-accent text-xs hover:underline">
-                    Submit for review
+                  <button
+                    onClick={() => submitComic(c._id)}
+                    disabled={busyId === c._id}
+                    className="text-accent text-xs hover:underline disabled:opacity-50"
+                  >
+                    {busyId === c._id ? 'Submitting…' : 'Submit for review'}
                   </button>
                 )}
                 <Link href={`/dashboard/comics/${c._id}/add-chapter`} className="text-accent2 text-xs hover:underline">
@@ -155,7 +182,7 @@ export default function DashboardPage() {
 
       <h2 className="font-display text-xl mb-3 uppercase">My Scripts</h2>
       {scripts.length === 0 ? (
-        <div className="ink-card rounded-lg p-8 text-center border-dashed border-paper/10 border">
+        <div className="static-card rounded-lg p-8 text-center border-dashed border-border/10 border">
           <p className="text-sm text-muted mb-4">No scripts uploaded yet.</p>
           <Link href="/dashboard/upload-script" className="px-4 py-2 bg-accent text-ink text-sm font-semibold rounded-md glow-btn transition">
             Upload your first script
@@ -164,7 +191,7 @@ export default function DashboardPage() {
       ) : (
         <div className="flex flex-col gap-2">
           {scripts.map((s) => (
-            <div key={s._id} className="ink-card rounded px-4 py-3 text-sm flex justify-between items-center gap-3 flex-wrap">
+            <div key={s._id} className="row-card rounded px-4 py-3 text-sm flex justify-between items-center gap-3 flex-wrap">
               <div className="min-w-0">
                 <p className="truncate">{s.title}</p>
                 <p className={`text-xs uppercase ${STATUS_STYLE[s.approvalStatus] || 'text-muted'}`}>
@@ -179,8 +206,12 @@ export default function DashboardPage() {
                   </Link>
                 )}
                 {(s.approvalStatus === 'draft' || s.approvalStatus === 'rejected') && (
-                  <button onClick={() => submitScript(s._id)} className="text-accent text-xs hover:underline">
-                    Submit for review
+                  <button
+                    onClick={() => submitScript(s._id)}
+                    disabled={busyId === s._id}
+                    className="text-accent text-xs hover:underline disabled:opacity-50"
+                  >
+                    {busyId === s._id ? 'Submitting…' : 'Submit for review'}
                   </button>
                 )}
               </div>

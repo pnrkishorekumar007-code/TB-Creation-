@@ -10,9 +10,9 @@ export default function CreatorCard({ creator }) {
   return (
     <Link
       href={`/authors/${_id}`}
-      className="ink-card rounded-lg p-5 flex flex-col items-center text-center gap-2 hover:-translate-y-1"
+      className="ink-card group rounded-md p-5 flex flex-col items-center text-center gap-2"
     >
-      <div className="relative w-20 h-20 rounded-full overflow-hidden bg-panel2 ring-2 ring-panel2">
+      <div className="relative w-20 h-20 rounded-full overflow-hidden bg-panel2 ring-2 ring-accent ring-offset-2 ring-offset-panel group-hover:ring-offset-4 transition-all">
         {avatarSrc ? (
           <Image
             src={avatarSrc}
@@ -27,7 +27,7 @@ export default function CreatorCard({ creator }) {
           </span>
         )}
       </div>
-      <p className="font-display text-lg leading-tight truncate max-w-full uppercase">
+      <p className="font-display text-xl leading-tight truncate max-w-full uppercase tracking-wide">
         {name}
       </p>
       <p className="text-xs text-muted line-clamp-2 min-h-[2rem]">{bio || 'Creator on TB Creation'}</p>

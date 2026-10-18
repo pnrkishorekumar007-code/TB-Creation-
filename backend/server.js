@@ -57,14 +57,21 @@ app.set('trust proxy', 1);
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 // When CLIENT_URL is unset, send no CORS headers at all (fail closed) instead of
 // falling back to the package default `*`. Same-origin requests never need CORS.
-// Origins are allow-listed exactly: a callback that returns false emits no
-// Access-Control-Allow-Origin header, so browsers refuse to share responses
-// with any origin other than the configured frontend.
-const allowedOrigins = process.env.CLIENT_URL ? new Set([process.env.CLIENT_URL]) : new Set();
+// Origins are allow-listed exactly (comma-separated CLIENT_URLs are allowed);
+// in local development any localhost/127.0.0.1 port is accepted too, so the
+// frontend running on an alternate port (npm run dev picked 3001) still works.
+const allowedOrigins = (process.env.CLIENT_URL || '')
+  .split(',')
+  .map((s) => s.trim())
+  .filter(Boolean);
+const isLocalDev = process.env.NODE_ENV !== 'production';
+const originAllowed = (origin) =>
+  allowedOrigins.includes(origin) ||
+  (isLocalDev && /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin));
 app.use(cors({
   origin: (origin, cb) => {
     if (!origin) return cb(null, true); // same-origin / non-browser client
-    cb(null, allowedOrigins.has(origin));
+    cb(null, originAllowed(origin));
   },
   credentials: true,
 }));

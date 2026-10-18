@@ -37,7 +37,7 @@ export default function FollowButton({ authorId }) {
       onClick={toggle}
       disabled={busy}
       className={`px-4 py-2 rounded text-sm font-semibold transition ${
-        following ? 'bg-panel2 text-paper border border-paper/20' : 'bg-accent text-ink'
+        following ? 'bg-panel2 text-paper border border-border/20' : 'bg-accent text-ink'
       }`}
     >
       {following ? 'Following' : '+ Follow'}

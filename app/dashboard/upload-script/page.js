@@ -38,7 +38,7 @@ export default function UploadScriptPage() {
 
   return (
     <div className="max-w-xl mx-auto px-5 py-10">
-      <h1 className="font-display text-3xl mb-2 uppercase">Upload Script</h1>
+      <h1 className="page-title font-display text-4xl tracking-wide mb-2 uppercase">Upload Script</h1>
       <p className="text-muted mb-8">Share a manga script — PDF, DOC, or TXT.</p>
 
       <form onSubmit={(e) => e.preventDefault()} className="flex flex-col gap-4">
@@ -72,7 +72,7 @@ export default function UploadScriptPage() {
             type="button"
             disabled={submitting}
             onClick={(e) => submit(e, false)}
-            className="flex-1 px-5 py-3 border border-paper/20 rounded text-sm hover:border-accent transition disabled:opacity-50"
+            className="flex-1 px-5 py-3 border border-border/20 rounded text-sm hover:border-accent transition disabled:opacity-50"
           >
             {submitting ? 'Saving...' : 'Save as Draft'}
           </button>

@@ -1,14 +1,14 @@
 import './globals.css';
-import { Archivo, Inter } from 'next/font/google';
+import { Bangers, Inter } from 'next/font/google';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import { AuthProvider } from '../lib/AuthContext';
 import { ThemeProvider } from '../lib/ThemeContext';
 import { SITE_URL } from '../lib/site';
 
-const display = Archivo({
+const display = Bangers({
   subsets: ['latin'],
-  weight: ['500', '600', '700', '800', '900'],
+  weight: '400',
   variable: '--font-display',
   display: 'swap',
 });
@@ -62,6 +62,8 @@ export default function RootLayout({ children }) {
     <html
       lang="en"
       data-theme="dark"
+      data-scroll-behavior="smooth"
+      suppressHydrationWarning
       className={`${display.variable} ${body.variable}`}
     >
       <head>

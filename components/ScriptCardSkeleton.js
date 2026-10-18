@@ -2,7 +2,7 @@ import Skeleton from './ui/Skeleton.js';
 
 export default function ScriptCardSkeleton() {
   return (
-    <div className="ink-card rounded-lg p-5">
+    <div className="static-card rounded-lg p-5">
       <div className="flex items-start justify-between gap-3">
         <Skeleton className="h-5 w-2/3" />
         <Skeleton className="h-5 w-16 rounded-full" />

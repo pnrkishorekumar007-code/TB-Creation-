@@ -42,7 +42,7 @@ export default function AdminPage() {
 
   return (
     <div className="max-w-4xl mx-auto px-5 py-10">
-      <h1 className="font-display text-3xl mb-8 uppercase">Admin — Approval Queue</h1>
+      <h1 className="page-title font-display text-4xl tracking-wide mb-8 uppercase">Admin — Approval Queue</h1>
 
       <h2 className="font-display text-xl mb-3">Open Reports</h2>
       {reports.length === 0 ? (
@@ -50,7 +50,7 @@ export default function AdminPage() {
       ) : (
         <div className="flex flex-col gap-2 mb-8">
           {reports.map((r) => (
-            <div key={r._id} className="ink-card rounded px-4 py-3 flex justify-between items-center text-sm">
+            <div key={r._id} className="row-card rounded px-4 py-3 flex justify-between items-center text-sm">
               <div>
                 <p className="uppercase text-xs text-accent">{r.targetType}</p>
                 <p>{r.reason}</p>
@@ -60,7 +60,7 @@ export default function AdminPage() {
                 <button onClick={() => resolveReport(r._id, 'reviewed')} className="px-3 py-1 bg-accent text-ink rounded text-xs font-semibold">
                   Mark Reviewed
                 </button>
-                <button onClick={() => resolveReport(r._id, 'dismissed')} className="px-3 py-1 border border-paper/20 rounded text-xs">
+                <button onClick={() => resolveReport(r._id, 'dismissed')} className="px-3 py-1 border border-border/20 rounded text-xs">
                   Dismiss
                 </button>
               </div>
@@ -75,7 +75,7 @@ export default function AdminPage() {
       ) : (
         <div className="flex flex-col gap-2 mb-8">
           {pendingComics.map((c) => (
-            <div key={c._id} className="ink-card rounded px-4 py-3 flex justify-between items-center text-sm">
+            <div key={c._id} className="row-card rounded px-4 py-3 flex justify-between items-center text-sm">
               <div>
                 <p>{c.title}</p>
                 <p className="text-xs text-muted">by {c.author?.name}</p>
@@ -84,7 +84,7 @@ export default function AdminPage() {
                 <button onClick={() => reviewComic(c._id, 'approved')} className="px-3 py-1 bg-accent text-ink rounded text-xs font-semibold">
                   Approve
                 </button>
-                <button onClick={() => reviewComic(c._id, 'rejected')} className="px-3 py-1 border border-paper/20 rounded text-xs">
+                <button onClick={() => reviewComic(c._id, 'rejected')} className="px-3 py-1 border border-border/20 rounded text-xs">
                   Reject
                 </button>
               </div>
@@ -99,7 +99,7 @@ export default function AdminPage() {
       ) : (
         <div className="flex flex-col gap-2">
           {pendingScripts.map((s) => (
-            <div key={s._id} className="ink-card rounded px-4 py-3 flex justify-between items-center text-sm">
+            <div key={s._id} className="row-card rounded px-4 py-3 flex justify-between items-center text-sm">
               <div>
                 <p>{s.title}</p>
                 <p className="text-xs text-muted">by {s.author?.name}</p>
@@ -108,7 +108,7 @@ export default function AdminPage() {
                 <button onClick={() => reviewScript(s._id, 'approved')} className="px-3 py-1 bg-accent text-ink rounded text-xs font-semibold">
                   Approve
                 </button>
-                <button onClick={() => reviewScript(s._id, 'rejected')} className="px-3 py-1 border border-paper/20 rounded text-xs">
+                <button onClick={() => reviewScript(s._id, 'rejected')} className="px-3 py-1 border border-border/20 rounded text-xs">
                   Reject
                 </button>
               </div>

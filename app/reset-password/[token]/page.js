@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import api from '../../../lib/api';
+import AuthLayout from '../../../components/AuthLayout';
 
 export default function ResetPasswordPage() {
   const { token } = useParams();
@@ -33,45 +34,50 @@ export default function ResetPasswordPage() {
     }
   };
 
-  if (done) {
-    return (
-      <div className="max-w-md mx-auto px-5 py-16 text-center">
-        <p className="font-display text-2xl mb-2">Password Updated</p>
-        <p className="text-muted">Redirecting you to log in...</p>
-      </div>
-    );
-  }
-
   return (
-    <div className="max-w-md mx-auto px-5 py-16">
-      <h1 className="font-display text-3xl mb-8">Set a New Password</h1>
-      <form onSubmit={submit} className="flex flex-col gap-4">
-        <input
-          required
-          type="password"
-          placeholder="New password (min 6 characters)"
-          minLength={6}
-          autoComplete="new-password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="bg-panel panel-border rounded px-4 py-3 text-sm outline-none focus:border-accent"
-        />
-        <input
-          required
-          type="password"
-          placeholder="Confirm new password"
-          value={confirm}
-          onChange={(e) => setConfirm(e.target.value)}
-          className="bg-panel panel-border rounded px-4 py-3 text-sm outline-none focus:border-accent"
-        />
-        {error && <p className="text-sm text-accent">{error}</p>}
-        <button type="submit" disabled={submitting} className="px-5 py-3 bg-accent text-ink font-semibold rounded disabled:opacity-50">
-          {submitting ? 'Saving...' : 'Reset Password'}
-        </button>
-      </form>
-      <p className="text-sm text-muted mt-4">
-        <Link href="/login" className="text-accent hover:underline">Back to log in</Link>
-      </p>
-    </div>
+    <AuthLayout variant="reset-password">
+      {done ? (
+        <div className="text-center">
+          <p className="font-display text-2xl mb-2 uppercase">Password Updated</p>
+          <p className="text-muted text-sm">Redirecting you to log in...</p>
+        </div>
+      ) : (
+        <>
+          <h1 className="font-display text-3xl mb-1 uppercase">Set a New Password</h1>
+          <p className="text-sm text-muted mb-8">Make it something you&apos;ll remember this time.</p>
+          <form onSubmit={submit} className="flex flex-col gap-4">
+            <input
+              required
+              type="password"
+              placeholder="New password (min 6 characters)"
+              minLength={6}
+              autoComplete="new-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="bg-panel panel-border rounded-md px-4 py-3 text-sm outline-none focus:border-accent transition"
+            />
+            <input
+              required
+              type="password"
+              placeholder="Confirm new password"
+              value={confirm}
+              onChange={(e) => setConfirm(e.target.value)}
+              className="bg-panel panel-border rounded-md px-4 py-3 text-sm outline-none focus:border-accent transition"
+            />
+            {error && <p className="text-sm text-danger">{error}</p>}
+            <button
+              type="submit"
+              disabled={submitting}
+              className="px-5 py-3 bg-accent text-ink font-bold rounded-md glow-btn transition disabled:opacity-50"
+            >
+              {submitting ? 'Saving...' : 'Reset Password'}
+            </button>
+          </form>
+          <p className="text-sm text-muted mt-5">
+            <Link href="/login" className="text-accent hover:underline font-medium">Back to log in</Link>
+          </p>
+        </>
+      )}
+    </AuthLayout>
   );
 }

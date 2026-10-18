@@ -16,8 +16,8 @@ export default async function AuthorsPage({ searchParams }) {
   return (
     <div className="max-w-6xl mx-auto px-5 py-10">
       <div className="mb-8">
-        <p className="text-xs uppercase tracking-widest text-accent font-semibold mb-1">Community</p>
-        <h1 className="font-display text-3xl sm:text-4xl mb-2 uppercase">Creators</h1>
+        <p className="section-eyebrow mb-2">Community</p>
+        <h1 className="page-title font-display text-4xl sm:text-5xl tracking-wide mb-2 uppercase">Creators</h1>
         <p className="text-muted text-sm">The writers and artists building stories on TB Creation.</p>
       </div>
 
@@ -39,7 +39,7 @@ export default async function AuthorsPage({ searchParams }) {
       </form>
 
       {authors.length === 0 ? (
-        <div className="ink-card rounded-lg p-10 text-center border-dashed border-paper/10 border">
+        <div className="static-card rounded-lg p-10 text-center border-dashed border-border/10 border">
           <p className="font-display text-xl uppercase mb-2">{q ? 'No creators found' : 'Nobody yet'}</p>
           <p className="text-sm text-muted">
             {q

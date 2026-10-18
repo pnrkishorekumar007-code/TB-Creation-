@@ -40,7 +40,7 @@ export default function AddChapterPage() {
 
   return (
     <div className="max-w-xl mx-auto px-5 py-10">
-      <h1 className="font-display text-3xl mb-2">Add Chapter</h1>
+      <h1 className="page-title font-display text-4xl tracking-wide mb-2">Add Chapter</h1>
       <p className="text-muted mb-8">Upload page images in reading order.</p>
 
       <form onSubmit={submit} className="flex flex-col gap-4">

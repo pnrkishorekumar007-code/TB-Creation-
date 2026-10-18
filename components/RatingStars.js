@@ -22,11 +22,8 @@ export default function RatingStars({ comicId }) {
   };
 
   useEffect(() => {
-    api.get(`/ratings/comic/${comicId}`).then((res) => {
-      setAverage(res.data.average);
-      setCount(res.data.count);
-      setMyRating(res.data.myRating);
-    });
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [comicId]);
 
   const rate = async (value) => {
@@ -47,8 +44,9 @@ export default function RatingStars({ comicId }) {
             onClick={() => rate(n)}
             onMouseEnter={() => setHover(n)}
             onMouseLeave={() => setHover(0)}
-            className="cursor-pointer text-lg"
-            style={{ color: (hover || myRating || 0) >= n ? '#E63946' : 'rgba(242,240,234,0.2)' }}
+            className={`cursor-pointer text-lg transition-colors ${
+              (hover || myRating || 0) >= n ? 'text-accent' : 'text-border/20'
+            }`}
           >
             ★
           </span>

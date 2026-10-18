@@ -1,9 +1,9 @@
-export const metadata = { title: 'Privacy Policy — TB Creation' };
+export const metadata = { title: 'Privacy Policy' };
 
 export default function PrivacyPage() {
   return (
     <div className="max-w-2xl mx-auto px-5 py-16">
-      <h1 className="font-display text-3xl mb-2 uppercase">Privacy Policy</h1>
+      <h1 className="page-title font-display text-4xl tracking-wide mb-2 uppercase">Privacy Policy</h1>
       <p className="text-muted text-sm mb-8">Last updated: August 2026</p>
 
       <div className="flex flex-col gap-6 text-sm text-muted leading-relaxed">

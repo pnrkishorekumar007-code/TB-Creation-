@@ -47,8 +47,8 @@ export default function ScriptsPage() {
   return (
     <div className="max-w-6xl mx-auto px-5 py-10">
       <div className="mb-8">
-        <p className="text-xs uppercase tracking-widest text-accent font-semibold mb-1">Writers Room</p>
-        <h1 className="font-display text-3xl sm:text-4xl mb-2 uppercase">Scripts</h1>
+        <p className="section-eyebrow mb-2">Writers Room</p>
+        <h1 className="page-title font-display text-4xl sm:text-5xl tracking-wide mb-2 uppercase">Scripts</h1>
         <p className="text-muted text-sm">Readable scripts and pitches — the blueprints behind great comics.</p>
       </div>
 
@@ -86,7 +86,7 @@ export default function ScriptsPage() {
           ))}
         </div>
       ) : error ? (
-        <div className="ink-card rounded-lg p-10 text-center">
+        <div className="static-card rounded-lg p-10 text-center">
           <p className="text-sm text-muted mb-4">{error}</p>
           <button
             type="button"
@@ -97,7 +97,7 @@ export default function ScriptsPage() {
           </button>
         </div>
       ) : scripts.length === 0 ? (
-        <div className="ink-card rounded-lg p-10 text-center border-dashed border-paper/10 border">
+        <div className="static-card rounded-lg p-10 text-center border-dashed border-border/10 border">
           <p className="font-display text-xl uppercase mb-2">Nothing here yet</p>
           <p className="text-sm text-muted mb-6">
             {filtered

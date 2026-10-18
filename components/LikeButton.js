@@ -39,7 +39,7 @@ export default function LikeButton({ comicId, scriptId }) {
       onClick={toggle}
       disabled={busy}
       className={`px-4 py-2 rounded text-sm font-semibold border transition ${
-        liked ? 'bg-accent text-ink border-accent' : 'border-paper/20 text-paper hover:border-accent'
+        liked ? 'bg-accent text-ink border-accent' : 'border-border/20 text-paper hover:border-accent'
       }`}
     >
       {liked ? '♥' : '♡'} {count}

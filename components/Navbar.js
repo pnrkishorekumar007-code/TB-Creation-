@@ -31,7 +31,7 @@ export default function Navbar() {
       ? '/dashboard/upload-comic'
       : '/dashboard';
 
-  const publishLabel = !isAuthor ? 'Publish' : 'Publish';
+  const publishLabel = 'Publish';
 
   const closeMenu = useCallback(() => setMenuOpen(false), []);
 
@@ -55,15 +55,25 @@ export default function Navbar() {
     return undefined;
   }, [menuOpen]);
 
+  const isActive = (href) =>
+    pathname === href || (href !== '/comics' && pathname.startsWith(href));
+
   const navLinkClass = (href, mobile = false) =>
-    `transition ${mobile ? 'px-3 py-2.5 rounded-md text-paper text-base' : 'text-sm text-muted hover:text-paper'} ${
-      pathname === href || (href !== '/comics' && pathname.startsWith(href))
-        ? 'text-accent'
-        : ''
-    } font-medium`;
+    `transition font-semibold ${
+      mobile
+        ? 'px-3 py-2.5 rounded-md text-base border-l-4 ' +
+          (isActive(href)
+            ? 'text-accent border-accent bg-accent/5'
+            : 'text-paper border-transparent hover:bg-panel2')
+        : 'text-sm underline decoration-[3px] underline-offset-[10px] ' +
+          (isActive(href)
+            ? 'text-accent decoration-accent'
+            : 'text-muted decoration-transparent hover:text-paper hover:decoration-border/30')
+    }`;
 
   return (
-    <header className="sticky top-0 z-40 bg-ink/90 backdrop-blur panel-border border-b">
+    <>
+      <header className="sticky top-0 z-40 bg-ink/90 backdrop-blur site-header">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-2 sm:gap-3">
         {/* Mobile hamburger */}
         <button
@@ -88,10 +98,13 @@ export default function Navbar() {
         {/* Logo */}
         <Link
           href="/"
-          className="font-display text-xl sm:text-[1.7rem] tracking-wide text-paper uppercase shrink-0"
+          className="flex items-center gap-2 shrink-0 text-paper"
           aria-label="TB Creation home"
         >
-          TB<span className="text-accent">Creation</span>
+          <span className="logo-mark font-display text-xl sm:text-2xl tracking-wide">TB</span>
+          <span className="font-display text-xl sm:text-[1.65rem] tracking-wider uppercase leading-none">
+            Creation
+          </span>
         </Link>
 
         {/* Desktop nav */}
@@ -199,8 +212,12 @@ export default function Navbar() {
           )}
         </div>
       </div>
+      </header>
 
-      {/* Mobile drawer */}
+      {/* Mobile drawer — sibling of <header>, not a child: header's
+          backdrop-filter creates a containing block that would otherwise
+          position this fixed overlay relative to the header instead of the
+          viewport (drawer landed in the wrong place / unclickable). */}
       {menuOpen && (
         <div className="lg:hidden fixed inset-0 top-16 z-40" aria-hidden="true">
           <div
@@ -248,6 +265,6 @@ export default function Navbar() {
           </div>
         </div>
       )}
-    </header>
+    </>
   );
 }

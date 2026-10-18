@@ -17,7 +17,7 @@ export default function AuthorProfile({ data }) {
 
   return (
     <div className="max-w-6xl mx-auto px-5 py-10">
-      <div className="ink-card rounded-lg p-6 sm:p-8 flex flex-col sm:flex-row gap-6 items-start sm:items-center">
+      <div className="static-card rounded-lg p-6 sm:p-8 flex flex-col sm:flex-row gap-6 items-start sm:items-center">
         <div className="relative w-20 h-20 rounded-full overflow-hidden bg-panel2 panel-border shrink-0">
           {author.avatarUrl ? (
             <Image
@@ -35,7 +35,7 @@ export default function AuthorProfile({ data }) {
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="font-display text-3xl uppercase">{author.name}</h1>
+            <h1 className="page-title font-display text-4xl tracking-wide uppercase">{author.name}</h1>
             <FollowButton authorId={author._id} />
           </div>
           {author.bio && <p className="text-muted text-sm mt-1">{author.bio}</p>}
@@ -63,7 +63,7 @@ export default function AuthorProfile({ data }) {
           <p className="text-muted text-sm">No comics published yet.</p>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-4">
-            {comics.map((c) => <ComicCard key={c._id} comic={c} />)}
+            {comics.map((c, i) => <ComicCard key={c._id} comic={c} priority={i < 6} />)}
           </div>
         )}
       </div>

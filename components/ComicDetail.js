@@ -24,7 +24,7 @@ export default function ComicDetail({ data }) {
     <div className="max-w-6xl mx-auto px-5 py-10">
       <div className="flex flex-col md:flex-row gap-8">
         <div className="w-full md:w-64 shrink-0">
-          <div className="relative aspect-[3/4] bg-panel2 rounded overflow-hidden ink-card">
+          <div className="relative aspect-[3/4] bg-panel2 rounded-md overflow-hidden static-card" style={{ boxShadow: '8px 8px 0 rgb(var(--accent))' }}>
             {coverSrc ? (
               <Image
                 src={coverSrc}
@@ -48,8 +48,8 @@ export default function ComicDetail({ data }) {
         </div>
 
         <div className="flex-1 min-w-0">
-          <p className="text-accent font-display tracking-widest text-sm uppercase">{comic.genre}</p>
-          <h1 className="font-display text-4xl mt-1">{comic.title}</h1>
+          <p className="section-eyebrow">{comic.genre}</p>
+          <h1 className="font-display text-5xl sm:text-6xl mt-2 uppercase leading-[0.98] tracking-wide">{comic.title}</h1>
           {hasChapters && (
             <p className="text-sm text-muted mt-1">
               {chapters.length} chapter{chapters.length === 1 ? '' : 's'}
@@ -63,7 +63,26 @@ export default function ComicDetail({ data }) {
             </Link>
             {authorId && <FollowButton authorId={authorId} />}
           </div>
-          <p className="text-muted mt-4 max-w-2xl">{comic.description}</p>
+          <p className="text-muted mt-4 max-w-2xl leading-relaxed">{comic.description}</p>
+
+          {hasChapters && (
+            <div className="flex flex-wrap gap-3 mt-6">
+              <Link
+                href={`/comics/${comic._id}/read/${chapters[0]._id}`}
+                className="glow-btn px-6 py-3 bg-accent text-onaccent font-bold rounded-md uppercase tracking-wide text-sm"
+              >
+                Start reading
+              </Link>
+              {chapters.length > 1 && (
+                <Link
+                  href={`/comics/${comic._id}/read/${chapters[chapters.length - 1]._id}`}
+                  className="outline-btn px-6 py-3 border border-border/30 rounded-md uppercase tracking-wide text-sm font-semibold"
+                >
+                  Latest chapter
+                </Link>
+              )}
+            </div>
+          )}
 
           {comic.views > 0 && (
             <div className="flex items-center gap-4 mt-4 text-xs text-muted">
@@ -91,16 +110,16 @@ export default function ComicDetail({ data }) {
             </div>
           )}
 
-          <h2 className="font-display text-xl mt-10 mb-3">Chapters</h2>
+          <h2 className="font-display text-3xl uppercase mt-12 mb-4 tracking-wide">Chapters</h2>
           {!hasChapters ? (
             <p className="text-muted text-sm">No chapters published yet.</p>
           ) : (
             <div className="flex flex-col gap-2">
-              {chapters.map((ch) => (
+              {chapters.map((ch, idx) => (
                 <Link
                   key={ch._id}
                   href={`/comics/${comic._id}/read/${ch._id}`}
-                  className="ink-card rounded px-4 py-3 flex justify-between items-center text-sm hover:border-accent/40 transition"
+                  className="row-link rounded-md px-4 py-3 flex justify-between items-center text-sm"
                 >
                   <span className="flex items-center gap-2">
                     {ch.locked && (
@@ -109,7 +128,8 @@ export default function ComicDetail({ data }) {
                         <path d="M7 11V7a5 5 0 0 1 10 0v4" />
                       </svg>
                     )}
-                    <span className="truncate">{ch.title}</span>
+                    <span className="font-display text-accent text-lg w-7 shrink-0">{idx + 1}</span>
+                    <span className="truncate font-medium">{ch.title}</span>
                   </span>
                   <span className="text-muted shrink-0 ml-3">
                     {ch.publishAt ? timeAgo(ch.publishAt) : ''}
@@ -119,7 +139,7 @@ export default function ComicDetail({ data }) {
             </div>
           )}
 
-          <h2 className="font-display text-xl mt-10 mb-3">Comments</h2>
+          <h2 className="font-display text-3xl uppercase mt-12 mb-4 tracking-wide">Comments</h2>
           <CommentSection comicId={comic._id} />
         </div>
       </div>

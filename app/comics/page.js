@@ -65,8 +65,8 @@ export default function ComicsPage() {
   return (
     <div className="max-w-6xl mx-auto px-5 py-10">
       <div className="mb-8">
-        <p className="text-xs uppercase tracking-widest text-accent font-semibold mb-1">Browse</p>
-        <h1 className="font-display text-3xl sm:text-4xl mb-2 uppercase">Discover Comics</h1>
+        <p className="section-eyebrow mb-2">Browse</p>
+        <h1 className="page-title font-display text-4xl sm:text-5xl tracking-wide mb-2 uppercase">Discover Comics</h1>
         <p className="text-muted text-sm">Original series from TB Creation creators.</p>
       </div>
 
@@ -144,7 +144,7 @@ export default function ComicsPage() {
           ))}
         </div>
       ) : error ? (
-        <div className="ink-card rounded-lg p-10 text-center">
+        <div className="static-card rounded-lg p-10 text-center">
           <p className="text-sm text-muted mb-4">{error}</p>
           <button
             type="button"
@@ -155,7 +155,7 @@ export default function ComicsPage() {
           </button>
         </div>
       ) : comics.length === 0 ? (
-        <div className="ink-card rounded-lg p-10 text-center border-dashed border-paper/10 border">
+        <div className="static-card rounded-lg p-10 text-center border-dashed border-border/10 border">
           <p className="font-display text-xl uppercase mb-2">Nothing here yet</p>
           <p className="text-sm text-muted mb-6">
             {filtered
@@ -176,8 +176,8 @@ export default function ComicsPage() {
         <>
           <p className="text-xs text-muted mb-4">{total} series</p>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-5">
-            {comics.map((c) => (
-              <ComicCard key={c._id} comic={c} />
+            {comics.map((c, i) => (
+              <ComicCard key={c._id} comic={c} priority={i < 5} />
             ))}
           </div>
 

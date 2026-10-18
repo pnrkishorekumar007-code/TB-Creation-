@@ -21,7 +21,7 @@ export default function ContactPage() {
 
   return (
     <div className="max-w-xl mx-auto px-5 py-16">
-      <h1 className="font-display text-3xl mb-2 uppercase">Contact Us</h1>
+      <h1 className="page-title font-display text-4xl tracking-wide mb-2 uppercase">Contact Us</h1>
       <p className="text-muted mb-8">Questions, feedback, or partnership ideas — send them our way.</p>
 
       <form onSubmit={submit} className="flex flex-col gap-4">
@@ -55,7 +55,7 @@ export default function ContactPage() {
         >
           {status === 'sending' ? 'Sending...' : 'Send Message'}
         </button>
-        {status === 'sent' && <p className="text-sm text-green-400">Message sent — we&apos;ll get back to you soon.</p>}
+        {status === 'sent' && <p className="text-sm text-success">Message sent — we&apos;ll get back to you soon.</p>}
         {status === 'error' && <p className="text-sm text-accent">Something went wrong. Try again.</p>}
       </form>
     </div>

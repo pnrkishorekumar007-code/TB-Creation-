@@ -29,8 +29,8 @@ const getAuthorProfile = async (req, res) => {
     if (!author) return res.status(404).json({ message: 'Author not found' });
 
     const [comics, scripts, followers] = await Promise.all([
-      Comic.find({ author: author._id, approvalStatus: 'approved' }),
-      Script.find({ author: author._id, approvalStatus: 'approved' }),
+      Comic.find({ author: author._id, approvalStatus: 'approved' }).populate('author', 'name'),
+      Script.find({ author: author._id, approvalStatus: 'approved' }).populate('author', 'name'),
       Follow.countDocuments({ author: author._id }),
     ]);
 

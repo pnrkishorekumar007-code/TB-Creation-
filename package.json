@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "server": "node backend/server.js",
-    "server:dev": "nodemon backend/server.js"
+    "server:dev": "node --watch backend/server.js"
   },
   "dependencies": {
     "axios": "^1.7.2",
@@ -28,12 +28,11 @@
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
-    "autoprefixer": "^10.4.19",
+    "@tailwindcss/postcss": "^4.3.3",
     "eslint": "^8.57.0",
     "eslint-config-next": "^15.5.25",
-    "nodemon": "^3.1.0",
     "postcss": "^8.5.6",
-    "tailwindcss": "^3.4.4"
+    "tailwindcss": "^4.3.3"
   },
   "overrides": {
     "qs": "^6.16.0",

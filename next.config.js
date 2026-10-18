@@ -8,6 +8,36 @@ const securityHeaders = [
   { key: 'X-DNS-Prefetch-Control', value: 'off' },
 ];
 
+// The backend origin (Render, etc.) when the API is served from a different
+// domain than this Next app. Derived from NEXT_PUBLIC_API_URL so the CSP and
+// next/image allow-list follow whatever backend URL is configured.
+let apiOrigin = '';
+let apiHost = '';
+try {
+  const raw = process.env.NEXT_PUBLIC_API_URL || '';
+  if (/^https?:\/\//.test(raw)) {
+    const parsedUrl = new URL(raw);
+    apiOrigin = parsedUrl.origin;
+    apiHost = parsedUrl.host;
+  }
+} catch (err) {
+  apiOrigin = '';
+  apiHost = '';
+}
+
+const imgSrc = [
+  "'self'",
+  'data:',
+  'blob:',
+  'http://localhost:5000',
+  'http://127.0.0.1:5000',
+  'https://res.cloudinary.com',
+];
+if (apiOrigin) imgSrc.push(apiOrigin);
+
+const connectSrc = ["'self'", 'http://localhost:5000', 'http://127.0.0.1:5000'];
+if (apiOrigin) connectSrc.push(apiOrigin);
+
 // Conservative CSP for the App Router. Next embeds its RSC bootstrap and the
 // theme toggle as inline scripts and inlines font CSS, so script-src/style-src
 // allow 'unsafe-inline'. The app never interpolates user input into HTML
@@ -18,9 +48,9 @@ const contentSecurityPolicy = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline'",
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob:",
+  `img-src ${imgSrc.join(' ')}`,
   "font-src 'self' data:",
-  "connect-src 'self'",
+  `connect-src ${connectSrc.join(' ')}`,
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",
@@ -28,14 +58,19 @@ const contentSecurityPolicy = [
   'upgrade-insecure-requests',
 ].join('; ');
 
+const remotePatterns = [
+  { protocol: 'http', hostname: 'localhost' },
+  { protocol: 'http', hostname: '127.0.0.1' },
+  { protocol: 'https', hostname: 'tb-creation.vercel.app' },
+  { protocol: 'https', hostname: 'res.cloudinary.com' },
+];
+if (apiHost) remotePatterns.push({ protocol: 'https', hostname: apiHost });
+
 const nextConfig = {
   poweredByHeader: false,
+  outputFileTracingRoot: __dirname,
   images: {
-    remotePatterns: [
-      { protocol: 'http', hostname: 'localhost' },
-      { protocol: 'http', hostname: '127.0.0.1' },
-      { protocol: 'https', hostname: 'tb-creation.vercel.app' },
-    ],
+    remotePatterns,
   },
   async headers() {
     const headers = [...securityHeaders];

@@ -1,6 +1,8 @@
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const { cloudinary, enabled: cloudEnabled } = require('../config/cloudinary');
+const { KIND_RESOURCE } = require('../utils/mediaPath');
 
 const makeStorage = (subfolder) => {
   const dir = path.join(__dirname, '..', 'uploads', subfolder);
@@ -17,6 +19,12 @@ const makeStorage = (subfolder) => {
     },
   });
 };
+
+// Cloud mode keeps the file in memory (a serverless / ephemeral disk is read
+// only or wiped on redeploy) and streams it to Cloudinary in the validation
+// step below. Local mode writes to disk exactly as before, and the disk folder
+// is only created when actually needed (never on a read-only cloud host).
+const storageFor = (subfolder) => (cloudEnabled ? multer.memoryStorage() : makeStorage(subfolder));
 
 const imageFilter = (req, file, cb) => {
   if (file.mimetype.startsWith('image/')) cb(null, true);
@@ -79,12 +87,21 @@ const FILETYPES = {
   },
 };
 
+// Which Cloudinary folder (and resource type) a multipart field maps to. The
+// field name is fixed by each route (cover / pages / avatar / file).
+const FIELD_KIND = { cover: 'covers', pages: 'pages', avatar: 'avatars', file: 'scripts' };
+
+const filesOf = (req) => (req.files && req.files.length ? req.files : req.file ? [req.file] : []);
+
 // Best-effort removal of files multer already wrote to disk. Called when a
 // request fails validation (or a later file in the same request is rejected),
 // so a partially-accepted multipart upload doesn't leave orphaned .bin files.
+// In cloud mode the files only ever exist in memory, so there is nothing to do.
 const cleanupFiles = (files) => {
   for (const file of files || []) {
-    const onDisk = file.path || path.join(file.destination, file.filename);
+    if (!file || file.buffer) continue;
+    const onDisk = file.path || (file.destination && file.filename ? path.join(file.destination, file.filename) : null);
+    if (!onDisk) continue;
     try {
       fs.unlinkSync(onDisk);
     } catch (e) {
@@ -94,8 +111,7 @@ const cleanupFiles = (files) => {
 };
 
 const cleanupUploads = (req) => {
-  const files = req.files && req.files.length ? req.files : req.file ? [req.file] : [];
-  cleanupFiles(files);
+  cleanupFiles(filesOf(req));
 };
 
 // Determine the real file type from its leading bytes (never trust the client's
@@ -107,62 +123,91 @@ const sniffFileType = (buf) => {
   return null;
 };
 
-// Post-multer middleware: reads every uploaded file back off disk, verifies its
-// magic bytes against an allow-list for this field, rewrites it to a safe
-// extension derived from the sniffed type, and rejects the upload otherwise.
-const validateUploads = (allowedExts) => {
-  const validateFile = (file) => {
-    const onDisk = path.join(file.destination, file.filename);
+const uploadBufferToCloudinary = (buffer, { publicId, resourceType }) =>
+  new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      {
+        public_id: publicId,
+        resource_type: resourceType,
+        overwrite: false,
+        unique_filename: false,
+        use_filename: false,
+        invalidate: true,
+      },
+      (err, result) => (err ? reject(err) : resolve(result))
+    );
+    stream.end(buffer);
+  });
 
-    let fd;
-    let head;
-    try {
-      fd = fs.openSync(onDisk, 'r');
-      head = Buffer.alloc(16);
-      fs.readSync(fd, head, 0, head.length, 0);
-    } catch (readErr) {
-      const e = new Error('Could not read uploaded file');
-      e.status = 400;
-      throw e;
-    } finally {
-      if (fd !== undefined) fs.closeSync(fd);
+// Post-multer middleware: verifies every uploaded file's magic bytes against an
+// allow-list, gives it a safe name derived from the sniffed type, and either
+// streams it to Cloudinary (cloud mode) or renames it on disk (local mode).
+const persistUploads = (allowedExts) => async (req, res, next) => {
+  const files = filesOf(req);
+
+  try {
+    for (const file of files) {
+      const kind = FIELD_KIND[file.fieldname] || 'covers';
+      const resourceType = KIND_RESOURCE[kind] || 'image';
+
+      let head;
+      if (cloudEnabled) {
+        head = Buffer.from(file.buffer.subarray(0, 16));
+      } else {
+        const onDisk = path.join(file.destination, file.filename);
+        let fd;
+        try {
+          fd = fs.openSync(onDisk, 'r');
+          head = Buffer.alloc(16);
+          fs.readSync(fd, head, 0, head.length, 0);
+        } catch (readErr) {
+          const e = new Error('Could not read uploaded file');
+          e.status = 400;
+          throw e;
+        } finally {
+          if (fd !== undefined) fs.closeSync(fd);
+        }
+      }
+
+      const sniffed = sniffFileType(head);
+      if (!sniffed || !allowedExts.includes(sniffed.ext)) {
+        const err = new Error(`File type not allowed. Accepted: ${allowedExts.join(', ')}`);
+        err.status = 400;
+        throw err;
+      }
+
+      const unique = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+      const safeName = `${unique}.${sniffed.ext}`;
+
+      if (cloudEnabled) {
+        const publicId = resourceType === 'raw' ? `tb/${kind}/${safeName}` : `tb/${kind}/${unique}`;
+        await uploadBufferToCloudinary(file.buffer, { publicId, resourceType });
+        file.filename = safeName;
+      } else {
+        const onDisk = path.join(file.destination, file.filename);
+        const finalName = `${file.filename}.${sniffed.ext}`;
+        fs.renameSync(onDisk, path.join(file.destination, finalName));
+        file.filename = finalName;
+      }
+
+      file.mimetype = sniffed.mime;
     }
-
-    const sniffed = sniffFileType(head);
-    if (!sniffed || !allowedExts.includes(sniffed.ext)) {
-      try { fs.unlinkSync(onDisk); } catch (e) { /* best effort */ }
-      const err = new Error(`File type not allowed. Accepted: ${allowedExts.join(', ')}`);
-      err.status = 400;
-      throw err;
-    }
-
-    const safeName = `${file.filename}.${sniffed.ext}`;
-    fs.renameSync(onDisk, path.join(file.destination, safeName));
-    file.filename = safeName;
-    file.mimetype = sniffed.mime;
-  };
-
-  return (req, res, next) => {
-    const files = (req.files && req.files.length) ? req.files : req.file ? [req.file] : [];
-    try {
-      for (const file of files) validateFile(file);
-      next();
-    } catch (err) {
-      // Drop every file from this request, including ones already validated
-      // before the failure, so nothing is orphaned on disk.
-      cleanupFiles(files);
-      next(err);
-    }
-  };
+    next();
+  } catch (err) {
+    // Drop every file from this request, including ones already accepted
+    // before the failure, so nothing is orphaned.
+    cleanupFiles(files);
+    next(err);
+  }
 };
 
-const uploadCover = multer({ storage: makeStorage('covers'), fileFilter: imageFilter, limits: { fileSize: 5 * 1024 * 1024 } });
-const uploadPages = multer({ storage: makeStorage('pages'), fileFilter: imageFilter, limits: { fileSize: 8 * 1024 * 1024 } });
-const uploadScript = multer({ storage: makeStorage('scripts'), fileFilter: scriptFilter, limits: { fileSize: 15 * 1024 * 1024 } });
-const uploadAvatar = multer({ storage: makeStorage('avatars'), fileFilter: imageFilter, limits: { fileSize: 3 * 1024 * 1024 } });
+const uploadCover = multer({ storage: storageFor('covers'), fileFilter: imageFilter, limits: { fileSize: 5 * 1024 * 1024 } });
+const uploadPages = multer({ storage: storageFor('pages'), fileFilter: imageFilter, limits: { fileSize: 8 * 1024 * 1024 } });
+const uploadScript = multer({ storage: storageFor('scripts'), fileFilter: scriptFilter, limits: { fileSize: 15 * 1024 * 1024 } });
+const uploadAvatar = multer({ storage: storageFor('avatars'), fileFilter: imageFilter, limits: { fileSize: 3 * 1024 * 1024 } });
 
-const validateImages = validateUploads(['jpg', 'png', 'gif', 'webp']);
-const validateScript = validateUploads(['pdf', 'doc', 'docx', 'txt']);
+const validateImages = persistUploads(['jpg', 'png', 'gif', 'webp']);
+const validateScript = persistUploads(['pdf', 'doc', 'docx', 'txt']);
 
 module.exports = {
   uploadCover,

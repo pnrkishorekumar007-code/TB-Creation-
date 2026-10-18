@@ -40,7 +40,7 @@ export default function HomeHeroActions({ type = 'hero' }) {
       </Link>
       <Link
         href={secondary.href}
-        className="outline-btn px-6 py-3.5 border border-paper/20 rounded-md hover:border-accent transition uppercase tracking-wide text-sm font-semibold"
+        className="outline-btn px-6 py-3.5 border border-border/20 rounded-md hover:border-accent transition uppercase tracking-wide text-sm font-semibold"
       >
         {secondary.label}
       </Link>

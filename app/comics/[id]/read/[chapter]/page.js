@@ -134,7 +134,7 @@ export default function ReaderPage() {
         </div>
 
         {chapterData.locked ? (
-          <div className="ink-card rounded-lg p-10 mt-8 text-center">
+          <div className="static-card rounded-lg p-10 mt-8 text-center">
             <p className="font-display text-2xl mb-2">Keep Reading with a Free Account</p>
             <p className="text-muted max-w-sm mx-auto mb-6">
               The first chapter is free for everyone. Sign up or log in to unlock every chapter,
@@ -144,7 +144,7 @@ export default function ReaderPage() {
               <Link href="/signup" className="px-5 py-3 bg-accent text-ink font-semibold rounded-md glow-btn">
                 Sign Up Free
               </Link>
-              <Link href="/login" className="px-5 py-3 border border-paper/20 rounded-md hover:border-accent transition">
+              <Link href="/login" className="px-5 py-3 border border-border/20 rounded-md hover:border-accent transition">
                 Log In
               </Link>
             </div>
@@ -159,6 +159,7 @@ export default function ReaderPage() {
                   width={900}
                   height={1270}
                   unoptimized
+                  priority={i === 0}
                   className="w-full h-auto"
                 />
               </div>
@@ -183,7 +184,7 @@ export default function ReaderPage() {
               Next Chapter →
             </Link>
           ) : (
-            <Link href={`/comics/${id}`} className="px-4 py-2.5 border border-paper/20 rounded-lg text-sm hover:border-accent transition">
+            <Link href={`/comics/${id}`} className="px-4 py-2.5 border border-border/20 rounded-lg text-sm hover:border-accent transition">
               Back to series →
             </Link>
           )}

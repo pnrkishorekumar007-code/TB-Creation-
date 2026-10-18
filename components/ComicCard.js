@@ -27,7 +27,7 @@ export default function ComicCard({ comic, priority = false }) {
   return (
     <Link
       href={`/comics/${_id}`}
-      className="ink-card rounded-lg overflow-hidden relative group flex flex-col"
+      className="ink-card rounded-md overflow-hidden relative group flex flex-col"
     >
       <div className="relative aspect-[3/4] bg-panel2 overflow-hidden shrink-0">
         {isHot && <span className="ribbon">Hot</span>}
@@ -47,14 +47,20 @@ export default function ComicCard({ comic, priority = false }) {
           </div>
         )}
         {status && (
-          <span className="absolute bottom-2 right-2 text-[10px] uppercase tracking-wide font-bold px-2 py-0.5 rounded bg-ink/70 backdrop-blur text-paper">
+          <span className="absolute top-2 right-2 text-[10px] uppercase tracking-wider font-extrabold px-2 py-0.5 rounded-sm bg-ink/80 backdrop-blur text-paper border border-border/20">
             {status}
           </span>
         )}
+        <span
+          className="absolute inset-x-0 bottom-0 translate-y-full group-hover:translate-y-0 group-focus-visible:translate-y-0 transition-transform duration-200 bg-accent text-onaccent font-display tracking-widest uppercase text-center text-base py-1.5"
+          aria-hidden="true"
+        >
+          Read now →
+        </span>
       </div>
 
-      <div className="p-3 flex flex-col flex-1 min-w-0">
-        <p className="font-display text-base sm:text-lg leading-tight truncate uppercase">
+      <div className="p-3 flex flex-col flex-1 min-w-0 border-t-2 border-border/10">
+        <p className="font-display text-lg sm:text-xl leading-tight truncate uppercase tracking-wide">
           {title}
         </p>
         <p className="text-xs text-muted mt-0.5 truncate">by {authorName}</p>
@@ -72,7 +78,7 @@ export default function ComicCard({ comic, priority = false }) {
         {(ratingCount > 0 || lastChapterAt || isHot) && (
           <div className="flex items-center justify-between mt-2 text-[11px]">
             {ratingCount > 0 ? (
-              <span className="text-amber-400" aria-label={`Rated ${ratingAvg.toFixed(1)} out of 5`}>
+              <span className="text-highlight font-bold" aria-label={`Rated ${ratingAvg.toFixed(1)} out of 5`}>
                 ★ {ratingAvg.toFixed(1)}
                 <span className="text-muted"> ({formatNumber(ratingCount)})</span>
               </span>

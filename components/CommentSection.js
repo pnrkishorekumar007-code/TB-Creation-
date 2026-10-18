@@ -64,7 +64,7 @@ export default function CommentSection({ comicId }) {
       ) : (
         <div className="flex flex-col gap-3">
           {comments.map((c) => (
-            <div key={c._id} className="ink-card rounded px-4 py-3">
+            <div key={c._id} className="row-card rounded px-4 py-3">
               <div className="flex justify-between items-start">
                 <p className="text-sm font-semibold">{c.user?.name || 'Deleted user'}</p>
                 <div className="flex gap-3">

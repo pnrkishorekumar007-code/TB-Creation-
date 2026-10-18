@@ -26,7 +26,7 @@ export default function BookmarksPage() {
 
   return (
     <div className="max-w-6xl mx-auto px-5 py-10">
-      <h1 className="font-display text-3xl mb-8 uppercase">My Library</h1>
+      <h1 className="page-title font-display text-4xl tracking-wide mb-8 uppercase">My Library</h1>
 
       <h2 className="font-display text-xl mb-3">Continue Reading</h2>
       {history.length === 0 ? (
@@ -37,7 +37,7 @@ export default function BookmarksPage() {
             <Link
               key={h._id}
               href={`/comics/${h.comic._id}/read/${h.lastChapter._id}`}
-              className="ink-card rounded px-4 py-3 flex justify-between items-center text-sm"
+              className="row-link rounded px-4 py-3 flex justify-between items-center text-sm"
             >
               <span>{h.comic.title} — {h.lastChapter.title}</span>
               <span className="text-accent text-xs">Resume →</span>
@@ -51,7 +51,7 @@ export default function BookmarksPage() {
         <p className="text-muted text-sm mb-8">No bookmarked comics yet.</p>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-4 mb-10">
-          {comicBookmarks.map((b) => <ComicCard key={b._id} comic={b.comic} />)}
+          {comicBookmarks.map((b, i) => <ComicCard key={b._id} comic={b.comic} priority={i < 6} />)}
         </div>
       )}
 

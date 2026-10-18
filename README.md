@@ -95,3 +95,16 @@ tb-creation/
 ## Notes
 - Uploaded files are stored locally in `backend/uploads/` — fine for development, but for production, move to Cloudinary, S3, or similar so files survive redeploys.
 - The design uses a manga-inspired dark theme (ink black background, red accent, halftone dot texture, Bangers display font) — all defined in `tailwind.config.js` and `app/globals.css`, easy to retheme.
+
+---
+
+## Design system ("Manga Magazine")
+
+All visual styling is token-driven — change the look from two files:
+
+- `app/globals.css` — colour tokens (dark default, light "printed paper" theme), card/row/button styles
+- `tailwind.config.js` — fonts, shadows, animations
+
+Key classes: `ink-card` (interactive card), `static-card` (non-interactive container), `row-card` / `row-link` (list rows), `glow-btn` (primary button), `outline-btn`, `page-title` (comic slash under titles), `section-eyebrow`, `tone` (screentone dots), `burst` (starburst badge), `ribbon`.
+Accent surfaces use `text-onaccent` for readable text in both themes.
+Display font is Bangers (single weight; faux-bold is disabled), body is Inter.
