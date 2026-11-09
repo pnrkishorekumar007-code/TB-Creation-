@@ -12,7 +12,7 @@ export default function FeedPage() {
 
   useEffect(() => {
     if (!user) return;
-    api.get('/feed').then((res) => setChapters(res.data)).finally(() => setFetching(false));
+    api.get('/feed').then((res) => setChapters(res.data)).catch(() => {}).finally(() => setFetching(false));
   }, [user]);
 
   if (loading) return null;

@@ -25,7 +25,7 @@ export default function ScriptDetail({ script }) {
       {script.synopsis && <p className="text-muted mt-4">{script.synopsis}</p>}
       <div className="flex items-center gap-4 mt-2 text-xs text-muted">
         {script.views != null && <span>{formatNumber(script.views)} views</span>}
-        {script.createdAt && <time dateTime={script.createdAt}>{timeAgo(script.createdAt)}</time>}
+        {script.createdAt && <time dateTime={script.createdAt} suppressHydrationWarning>{timeAgo(script.createdAt)}</time>}
       </div>
 
       <div className="flex flex-wrap gap-3 mt-6">

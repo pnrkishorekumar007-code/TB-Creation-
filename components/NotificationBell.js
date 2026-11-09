@@ -35,7 +35,7 @@ export default function NotificationBell() {
     api.get('/notifications').then((res) => {
       setNotifications(res.data.notifications);
       setUnreadCount(res.data.unreadCount);
-    });
+    }).catch(() => {});
   };
 
   useEffect(() => {
@@ -86,7 +86,7 @@ export default function NotificationBell() {
             notifications.map((n) => (
               <Link
                 key={n._id}
-                href={n.link || '/feed'}
+                href={n.link || '#'}
                 onClick={() => setOpen(false)}
                 className="block px-4 py-3 text-sm border-b border-white/5 last:border-b-0 hover:bg-panel2 transition"
               >

@@ -1,8 +1,15 @@
 const mongoose = require('mongoose');
 
+// Never queue queries while disconnected; callers get an immediate error
+// instead of a 10s buffering timeout.
+mongoose.set('bufferCommands', false);
+
 const connectDB = async () => {
   try {
-    await mongoose.connect(process.env.MONGO_URI);
+    // Fail fast and never queue queries against a dead connection: without
+    // these, every request waits 10s in Mongoose's buffer and then throws.
+    await mongoose.connect(process.env.MONGO_URI, { serverSelectionTimeoutMS: 5000 });
+    // eslint-disable-next-line no-console
     console.log('MongoDB connected');
   } catch (err) {
     // Log a generic message only: Mongo connection errors can echo the full

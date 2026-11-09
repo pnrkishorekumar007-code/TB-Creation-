@@ -21,7 +21,7 @@ export default function ScriptCard({ script }) {
         <span>
           {formatNumber(views)} views
           {createdAt ? <span aria-hidden="true"> · </span> : null}
-          {createdAt ? <time dateTime={createdAt}>{timeAgo(createdAt)}</time> : null}
+          {createdAt ? <time dateTime={createdAt} suppressHydrationWarning>{timeAgo(createdAt)}</time> : null}
         </span>
       </div>
     </Link>

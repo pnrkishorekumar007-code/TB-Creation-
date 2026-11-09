@@ -1,4 +1,4 @@
-export const metadata = { title: 'Terms of Service' };
+export const metadata = { title: 'Terms of Service — TB Creation' };
 
 export default function TermsPage() {
   return (

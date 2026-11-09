@@ -3,20 +3,15 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const User = require('../models/User');
-const { emailEnabled, sendPasswordReset } = require('../utils/mailer');
 
 const signToken = (id) =>
   jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '30d' });
 
 const TOKEN_COOKIE = 'tb_token';
-// When the frontend and API are on different domains (Vercel + Render), the
-// session cookie is cross-site and must be SameSite=None; Secure or browsers
-// drop it. That also works fine when both are same-origin in production.
-const PROD = process.env.NODE_ENV === 'production';
 const TOKEN_COOKIE_OPTIONS = {
   httpOnly: true,
-  sameSite: PROD ? 'none' : 'lax',
-  secure: PROD,
+  sameSite: 'lax',
+  secure: process.env.NODE_ENV === 'production',
   maxAge: 30 * 24 * 60 * 60 * 1000,
   path: '/',
 };
@@ -91,6 +86,8 @@ const login = async (req, res) => {
   }
 };
 
+// Session probe used on every page load. Guests get { user: null } (200) rather
+// than a 401, so the browser console stays clean for logged-out visitors.
 const me = async (req, res) => {
   res.json({ user: req.user ? serializeUser(req.user) : null });
 };
@@ -118,26 +115,17 @@ const forgotPassword = async (req, res) => {
 
     const resetUrl = `${process.env.CLIENT_URL || 'http://localhost:3000'}/reset-password/${rawToken}`;
 
-    // Deliver the link by email when a provider is configured. Otherwise fall
-    // back to logging it in non-production so local development still works.
-    // Failure to send is swallowed so the response stays identical either way
-    // (no account enumeration via error differences).
-    let delivered = false;
-    if (emailEnabled()) {
-      try {
-        await sendPasswordReset({ to: user.email, resetUrl });
-        delivered = true;
-      } catch (mailErr) {
-        console.error('Password reset email failed:', mailErr.message || mailErr);
-      }
-    }
-    if (!delivered && process.env.NODE_ENV !== 'production') {
+    // No email service is configured yet — log the link only outside
+    // production (server logs are a sensitive place for reset credentials).
+    // Wire this to a real provider (SendGrid, Postmark, SES, etc.) before
+    // going to production.
+    if (process.env.NODE_ENV !== 'production') {
       console.log(`Password reset requested for ${user.email}: ${resetUrl}`);
     }
 
     res.json({
       message: 'If that email is registered, a reset link has been sent.',
-      devResetUrl: process.env.NODE_ENV === 'production' || delivered ? undefined : resetUrl,
+      devResetUrl: process.env.NODE_ENV === 'production' ? undefined : resetUrl,
     });
   } catch (err) {
     serverError(res, err);

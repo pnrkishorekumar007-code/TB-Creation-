@@ -88,7 +88,7 @@ export default function ComicCard({ comic, priority = false }) {
               <span />
             )}
             {lastChapterAt && (
-              <time dateTime={lastChapterAt} className="text-muted">
+              <time dateTime={lastChapterAt} className="text-muted" suppressHydrationWarning>
                 {timeAgo(lastChapterAt)}
               </time>
             )}

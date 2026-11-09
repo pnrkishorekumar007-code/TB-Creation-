@@ -53,32 +53,23 @@ export default function HomeHeroVisual({ trending }) {
     );
   }
 
-  // Editorial placeholder while no covers exist — never fakes content.
+  // No covers yet: show a bold typographic poster instead of fake content.
   return (
     <div className="relative ml-auto max-w-sm pt-6">
       <SoundFx />
-      <div className="static-card rounded-md p-6 -rotate-2" style={{ boxShadow: '8px 8px 0 rgb(var(--accent))' }}>
-        <p className="font-display text-3xl uppercase leading-[1.05]">
-          Panel one.
+      <div
+        className="static-card rounded-md p-7 -rotate-2"
+        style={{ boxShadow: '8px 8px 0 rgb(var(--accent))' }}
+      >
+        <p className="font-display text-5xl uppercase leading-[0.95]">
+          Draw it.
           <br />
-          An idea.
+          Write it.
           <br />
-          <span className="text-accent">A whole world.</span>
+          <span className="text-accent">Share it.</span>
         </p>
-        <div className="mt-5 grid grid-cols-3 gap-2">
-          {[0, 1, 2, 3, 4, 5].map((n) => (
-            <div
-              key={n}
-              className={`aspect-[3/4] rounded-sm border-2 border-border/60 flex items-center justify-center tone ${
-                n === 4 ? 'bg-accent/20' : 'bg-panel2'
-              }`}
-            >
-              <span className="font-display text-sm text-muted">{n + 1}</span>
-            </div>
-          ))}
-        </div>
-        <p className="text-xs text-muted mt-4">
-          Every series starts with a first page. Yours is waiting.
+        <p className="text-sm text-muted mt-5 leading-relaxed">
+          Be the first to publish a series on TB Creation.
         </p>
       </div>
     </div>

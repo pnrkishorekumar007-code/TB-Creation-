@@ -78,13 +78,16 @@ function SectionHeader({ index, eyebrow, title, href }) {
 function GenreStrip() {
   const items = [...GENRES, ...GENRES];
   return (
-    <div className="overflow-hidden my-2" aria-hidden="true">
-      <div className="marquee bg-accent text-onaccent border-y-2 border-border/80 -rotate-[0.6deg] scale-[1.01]">
+    <div className="overflow-x-clip py-3" aria-hidden="true">
+      <div className="marquee bg-accent text-onaccent border-y-2 border-border/80 -rotate-[0.6deg]">
         <div className="marquee-track animate-marquee py-2.5">
           {items.map((g, i) => (
-            <span key={i} className="font-display text-xl tracking-widest uppercase whitespace-nowrap px-6 flex items-center gap-12">
+            <span
+              key={i}
+              className="font-display text-xl tracking-widest uppercase whitespace-nowrap px-6 flex items-center gap-12"
+            >
               {g}
-              <span className="text-black/60">✦</span>
+              <span className="opacity-60">✦</span>
             </span>
           ))}
         </div>
@@ -115,7 +118,7 @@ export default async function HomePage() {
         <div className="absolute inset-0 speed-line opacity-40 pointer-events-none" />
         <div className="hero-glow -top-48 -right-24" />
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-8 sm:pt-12 pb-16 sm:pb-20 relative">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-16 sm:pt-24 pb-20 sm:pb-28 relative">
           <div className="grid lg:grid-cols-[1.15fr_0.85fr] gap-14 items-center">
             <div className="animate-fade-up">
               <p className="section-eyebrow mb-5">Independent manga &amp; comics</p>

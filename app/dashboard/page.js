@@ -29,13 +29,11 @@ export default function DashboardPage() {
   const [scripts, setScripts] = useState([]);
   const [followers, setFollowers] = useState(null);
   const [loaded, setLoaded] = useState(false);
-  const [error, setError] = useState('');
-  const [busyId, setBusyId] = useState(null);
 
   const load = useCallback(() => {
     if (!user) return;
-    api.get('/comics/mine').then((res) => setComics(res.data)).catch(() => setError('Could not load your comics.')).finally(() => setLoaded(true));
-    api.get('/scripts/mine').then((res) => setScripts(res.data)).catch(() => setError('Could not load your scripts.')).finally(() => {});
+    api.get('/comics/mine').then((res) => setComics(res.data)).catch(() => {}).finally(() => setLoaded(true));
+    api.get('/scripts/mine').then((res) => setScripts(res.data)).catch(() => {}).finally(() => {});
     api.get(`/follows/count/${user.id}`).then((res) => setFollowers(res.data.followers)).catch(() => {});
   }, [user]);
 
@@ -45,29 +43,13 @@ export default function DashboardPage() {
   }, [user, load]);
 
   const submitComic = async (id) => {
-    setBusyId(id);
-    setError('');
-    try {
-      await api.put(`/comics/${id}/submit`);
-      load();
-    } catch (err) {
-      setError(err.response?.data?.message || 'Could not submit comic for review.');
-    } finally {
-      setBusyId(null);
-    }
+    await api.put(`/comics/${id}/submit`);
+    load();
   };
 
   const submitScript = async (id) => {
-    setBusyId(id);
-    setError('');
-    try {
-      await api.put(`/scripts/${id}/submit`);
-      load();
-    } catch (err) {
-      setError(err.response?.data?.message || 'Could not submit script for review.');
-    } finally {
-      setBusyId(null);
-    }
+    await api.put(`/scripts/${id}/submit`);
+    load();
   };
 
   if (loading) return null;
@@ -90,7 +72,9 @@ export default function DashboardPage() {
     );
   }
 
-  const liveComics = comics.filter((c) => c.approvalStatus === 'approved').length;
+  const liveCount =
+    comics.filter((c) => c.approvalStatus === 'approved').length +
+    scripts.filter((s) => s.approvalStatus === 'approved').length;
   const totalViews =
     comics.reduce((sum, c) => sum + (c.views || 0), 0) +
     scripts.reduce((sum, s) => sum + (s.views || 0), 0);
@@ -99,7 +83,7 @@ export default function DashboardPage() {
     scripts.filter((s) => s.approvalStatus === 'pending').length;
 
   const stats = [
-    { label: 'Total Series', value: comics.length + scripts.length, sub: `${liveComics} live` },
+    { label: 'Total Works', value: comics.length + scripts.length, sub: `${liveCount} live` },
     { label: 'In Review', value: pendingCount },
     { label: 'Total Views', value: formatNumber(totalViews) },
     ...(followers != null ? [{ label: 'Followers', value: formatNumber(followers) }] : []),
@@ -121,12 +105,7 @@ export default function DashboardPage() {
           </Link>
         </div>
       </div>
-      <p className="text-sm text-muted mb-4">Welcome back, {user.name}.</p>
-      {error && (
-        <p className="text-sm text-accent bg-accent/10 border border-accent/30 rounded px-4 py-2 mb-6">
-          {error}
-        </p>
-      )}
+      <p className="text-sm text-muted mb-8">Welcome back, {user.name}.</p>
 
       {loaded && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-10">
@@ -163,12 +142,8 @@ export default function DashboardPage() {
                   </Link>
                 )}
                 {(c.approvalStatus === 'draft' || c.approvalStatus === 'rejected') && (
-                  <button
-                    onClick={() => submitComic(c._id)}
-                    disabled={busyId === c._id}
-                    className="text-accent text-xs hover:underline disabled:opacity-50"
-                  >
-                    {busyId === c._id ? 'Submitting…' : 'Submit for review'}
+                  <button onClick={() => submitComic(c._id)} className="text-accent text-xs hover:underline">
+                    Submit for review
                   </button>
                 )}
                 <Link href={`/dashboard/comics/${c._id}/add-chapter`} className="text-accent2 text-xs hover:underline">
@@ -206,12 +181,8 @@ export default function DashboardPage() {
                   </Link>
                 )}
                 {(s.approvalStatus === 'draft' || s.approvalStatus === 'rejected') && (
-                  <button
-                    onClick={() => submitScript(s._id)}
-                    disabled={busyId === s._id}
-                    className="text-accent text-xs hover:underline disabled:opacity-50"
-                  >
-                    {busyId === s._id ? 'Submitting…' : 'Submit for review'}
+                  <button onClick={() => submitScript(s._id)} className="text-accent text-xs hover:underline">
+                    Submit for review
                   </button>
                 )}
               </div>

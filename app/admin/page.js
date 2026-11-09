@@ -11,9 +11,9 @@ export default function AdminPage() {
   const [reports, setReports] = useState([]);
 
   const load = () => {
-    api.get('/admin/comics/pending').then((res) => setPendingComics(res.data));
-    api.get('/admin/scripts/pending').then((res) => setPendingScripts(res.data));
-    api.get('/reports/open').then((res) => setReports(res.data));
+    api.get('/admin/comics/pending').then((res) => setPendingComics(res.data)).catch(() => {});
+    api.get('/admin/scripts/pending').then((res) => setPendingScripts(res.data)).catch(() => {});
+    api.get('/reports/open').then((res) => setReports(res.data)).catch(() => {});
   };
 
   useEffect(() => {

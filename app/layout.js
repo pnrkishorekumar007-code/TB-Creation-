@@ -62,7 +62,6 @@ export default function RootLayout({ children }) {
     <html
       lang="en"
       data-theme="dark"
-      data-scroll-behavior="smooth"
       suppressHydrationWarning
       className={`${display.variable} ${body.variable}`}
     >

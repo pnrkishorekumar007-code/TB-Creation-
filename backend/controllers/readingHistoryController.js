@@ -28,7 +28,7 @@ const getContinueReading = async (req, res) => {
     const history = await ReadingHistory.find({ user: req.user._id })
       .sort({ updatedAt: -1 })
       .limit(12)
-      .populate({ path: 'comic', populate: { path: 'author', select: 'name' } })
+      .populate('comic')
       .populate('lastChapter', 'title order');
     res.json(history.filter((h) => h.comic));
   } catch (err) {

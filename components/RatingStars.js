@@ -18,7 +18,7 @@ export default function RatingStars({ comicId }) {
       setAverage(res.data.average);
       setCount(res.data.count);
       setMyRating(res.data.myRating);
-    });
+    }).catch(() => {});
   };
 
   useEffect(() => {
@@ -37,19 +37,24 @@ export default function RatingStars({ comicId }) {
 
   return (
     <div className="flex items-center gap-2">
-      <div className="flex">
+      <div className="flex" role="group" aria-label="Rate this comic">
         {[1, 2, 3, 4, 5].map((n) => (
-          <span
+          <button
+            type="button"
             key={n}
             onClick={() => rate(n)}
             onMouseEnter={() => setHover(n)}
             onMouseLeave={() => setHover(0)}
-            className={`cursor-pointer text-lg transition-colors ${
+            onFocus={() => setHover(n)}
+            onBlur={() => setHover(0)}
+            aria-label={`Rate ${n} star${n > 1 ? 's' : ''}`}
+            aria-pressed={myRating === n}
+            className={`cursor-pointer text-xl leading-none px-0.5 transition-colors ${
               (hover || myRating || 0) >= n ? 'text-accent' : 'text-border/20'
             }`}
           >
             ★
-          </span>
+          </button>
         ))}
       </div>
       <span className="text-xs text-muted">

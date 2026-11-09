@@ -14,11 +14,11 @@ export default function CommentSection({ comicId }) {
   const [reportTarget, setReportTarget] = useState(null);
 
   const load = () => {
-    api.get(`/comments/comic/${comicId}`).then((res) => setComments(res.data));
+    api.get(`/comments/comic/${comicId}`).then((res) => setComments(res.data)).catch(() => {});
   };
 
   useEffect(() => {
-    api.get(`/comments/comic/${comicId}`).then((res) => setComments(res.data));
+    api.get(`/comments/comic/${comicId}`).then((res) => setComments(res.data)).catch(() => {});
   }, [comicId]);
 
   const submit = async (e) => {

@@ -31,7 +31,7 @@ export default function Navbar() {
       ? '/dashboard/upload-comic'
       : '/dashboard';
 
-  const publishLabel = 'Publish';
+  const publishLabel = !isAuthor ? 'Publish' : 'Publish';
 
   const closeMenu = useCallback(() => setMenuOpen(false), []);
 
@@ -73,7 +73,7 @@ export default function Navbar() {
 
   return (
     <>
-      <header className="sticky top-0 z-40 bg-ink/90 backdrop-blur site-header">
+    <header className="sticky top-0 z-40 bg-ink/90 backdrop-blur site-header">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-2 sm:gap-3">
         {/* Mobile hamburger */}
         <button
@@ -102,7 +102,7 @@ export default function Navbar() {
           aria-label="TB Creation home"
         >
           <span className="logo-mark font-display text-xl sm:text-2xl tracking-wide">TB</span>
-          <span className="font-display text-xl sm:text-[1.65rem] tracking-wider uppercase leading-none">
+          <span className="font-display text-lg min-[400px]:text-xl sm:text-[1.65rem] tracking-wider uppercase leading-none">
             Creation
           </span>
         </Link>
@@ -205,19 +205,18 @@ export default function Navbar() {
           {!user && (
             <Link
               href={publishHref}
-              className="sm:hidden text-xs px-2.5 py-1.5 bg-accent text-ink font-bold rounded-md whitespace-nowrap"
+              className="hidden min-[390px]:inline-flex sm:hidden text-xs px-2.5 py-1.5 bg-accent text-ink font-bold rounded-md whitespace-nowrap"
             >
               {publishLabel}
             </Link>
           )}
         </div>
       </div>
-      </header>
 
-      {/* Mobile drawer — sibling of <header>, not a child: header's
-          backdrop-filter creates a containing block that would otherwise
-          position this fixed overlay relative to the header instead of the
-          viewport (drawer landed in the wrong place / unclickable). */}
+    </header>
+
+      {/* Mobile drawer — rendered OUTSIDE the header: the header's backdrop-blur would
+          otherwise become the containing block for this fixed overlay and collapse it to 0px. */}
       {menuOpen && (
         <div className="lg:hidden fixed inset-0 top-16 z-40" aria-hidden="true">
           <div
@@ -254,11 +253,23 @@ export default function Navbar() {
                     <Link href="/admin" className={navLinkClass('/admin', true)}>Admin</Link>
                   )}
                   <Link href={publishHref} className={navLinkClass(publishHref, true)}>Publish</Link>
+                  <Link href="/contact" className={navLinkClass('/contact', true)}>Contact</Link>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      closeMenu();
+                      logout();
+                    }}
+                    className="mt-2 px-3 py-2.5 rounded-md text-base font-semibold text-left border-l-4 border-transparent text-danger hover:bg-panel2 transition"
+                  >
+                    Log out
+                  </button>
                 </>
               ) : (
                 <>
                   <Link href="/login" className={navLinkClass('/login', true)}>Log in</Link>
                   <Link href="/signup" className={navLinkClass('/signup', true)}>Sign up</Link>
+                  <Link href="/contact" className={navLinkClass('/contact', true)}>Contact</Link>
                 </>
               )}
             </nav>

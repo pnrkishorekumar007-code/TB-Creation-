@@ -16,7 +16,7 @@ export default function LikeButton({ comicId, scriptId }) {
     api.get('/likes/status', { params: comicId ? { comicId } : { scriptId } }).then((res) => {
       setLiked(res.data.liked);
       setCount(res.data.count);
-    });
+    }).catch(() => {});
   }, [comicId, scriptId]);
 
   const toggle = async () => {
@@ -38,6 +38,8 @@ export default function LikeButton({ comicId, scriptId }) {
     <button
       onClick={toggle}
       disabled={busy}
+      aria-pressed={liked}
+      aria-label={liked ? `Unlike (${count} likes)` : `Like (${count} likes)`}
       className={`px-4 py-2 rounded text-sm font-semibold border transition ${
         liked ? 'bg-accent text-ink border-accent' : 'border-border/20 text-paper hover:border-accent'
       }`}

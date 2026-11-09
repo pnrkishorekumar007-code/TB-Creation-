@@ -108,3 +108,18 @@ All visual styling is token-driven — change the look from two files:
 Key classes: `ink-card` (interactive card), `static-card` (non-interactive container), `row-card` / `row-link` (list rows), `glow-btn` (primary button), `outline-btn`, `page-title` (comic slash under titles), `section-eyebrow`, `tone` (screentone dots), `burst` (starburst badge), `ribbon`.
 Accent surfaces use `text-onaccent` for readable text in both themes.
 Display font is Bangers (single weight; faux-bold is disabled), body is Inter.
+
+
+---
+
+## Uploads & hosting (read before deploying)
+
+Uploaded files (covers, chapter pages, avatars, story files) need somewhere durable to live.
+
+| Setting | Behaviour |
+| --- | --- |
+| `MEDIA_STORAGE` unset | Files stay on local disk (`backend/uploads`). Perfect for local development. |
+| `MEDIA_STORAGE=db` | Files are also stored in your MongoDB (`MediaBlob` collection) and are restored automatically if the server's disk is wiped (redeploy, restart, free-tier spin-down). **Recommended on Render/Railway.** |
+| On Vercel | `db` mode switches on automatically (Vercel's disk is read-only). |
+
+**Important Vercel limit:** Vercel serverless functions reject request bodies over **4.5 MB**, so uploading a whole chapter (many pages) through a Vercel-hosted API will fail regardless of storage. Host the **backend on Render (or Railway)** with `MEDIA_STORAGE=db`, keep the frontend on Vercel, and point `NEXT_PUBLIC_API_URL` at the backend (add its origin to `CLIENT_URL`/CORS). MongoDB Atlas free tier holds 512 MB, which is fine to launch; move to S3/Cloudinary when your library grows.

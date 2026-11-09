@@ -131,7 +131,7 @@ export default function ComicDetail({ data }) {
                     <span className="font-display text-accent text-lg w-7 shrink-0">{idx + 1}</span>
                     <span className="truncate font-medium">{ch.title}</span>
                   </span>
-                  <span className="text-muted shrink-0 ml-3">
+                  <span className="text-muted shrink-0 ml-3" suppressHydrationWarning>
                     {ch.publishAt ? timeAgo(ch.publishAt) : ''}
                   </span>
                 </Link>

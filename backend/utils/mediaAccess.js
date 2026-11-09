@@ -1,9 +1,6 @@
 const crypto = require('crypto');
-const fs = require('fs');
-const path = require('path');
 const Media = require('../models/Media');
-const { cloudinary, enabled: cloudEnabled } = require('../config/cloudinary');
-const { parseMediaPath } = require('./mediaPath');
+const { persistFile, removeFile } = require('./mediaStore');
 
 // Short-lived capability token. A tokenised URL is only as good as a
 // presigned S3 URL: whoever holds it can fetch the file until it expires.
@@ -30,6 +27,7 @@ const registerMedia = async ({ file, owner, kind, ref = '', public: isPublic = f
     );
     if (isPublic) publicCache.set(file, true);
     else publicCache.delete(file);
+    await persistFile(file); // no-op unless MEDIA_STORAGE=db / Vercel
     return doc;
   } catch (err) {
     // Indexing must never fail an upload or a content save.
@@ -72,24 +70,7 @@ const deleteMedia = async (files) => {
   } catch (err) {
     // Best effort; the memory cache is already cleared for this process.
   }
-  for (const file of list) {
-    if (cloudEnabled) {
-      const parsed = parseMediaPath(file);
-      if (parsed) {
-        try {
-          await cloudinary.uploader.destroy(parsed.publicId, { resource_type: parsed.resourceType });
-        } catch (e) {
-          // Remote object already gone or provider hiccup — fine.
-        }
-      }
-    } else {
-      try {
-        fs.unlinkSync(path.join(__dirname, '..', file));
-      } catch (e) {
-        // File already gone or on a read-only/ephemeral mount — fine.
-      }
-    }
-  }
+  for (const file of list) await removeFile(file);
 };
 
 /** Get the full visibility record (exists? public?) for the /uploads handler. */

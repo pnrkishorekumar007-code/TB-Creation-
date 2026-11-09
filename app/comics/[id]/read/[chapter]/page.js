@@ -159,7 +159,6 @@ export default function ReaderPage() {
                   width={900}
                   height={1270}
                   unoptimized
-                  priority={i === 0}
                   className="w-full h-auto"
                 />
               </div>

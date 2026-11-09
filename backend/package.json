@@ -4,17 +4,12 @@
   "description": "TB Creation backend API",
   "main": "server.js",
   "type": "commonjs",
-  "engines": {
-    "node": ">=18"
-  },
   "scripts": {
     "start": "node server.js",
-    "dev": "node --watch server.js",
-    "dev:memory": "node dev.js"
+    "dev": "nodemon server.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
-    "cloudinary": "^2.5.1",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
@@ -23,13 +18,16 @@
     "helmet": "^7.1.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.4.0",
-    "multer": "^2.1.1",
-    "resend": "^4.0.0"
+    "multer": "^2.5.0"
   },
   "devDependencies": {
-    "mongodb-memory-server": "^11.3.0"
+    "nodemon": "^3.1.14"
   },
   "overrides": {
-    "qs": "^6.16.0"
+    "qs": "^6.17.1",
+    "body-parser": "^1.20.9",
+    "proxy-addr": "^2.0.8",
+    "minimatch": "^11.0.5",
+    "brace-expansion": "^5.0.12"
   }
 }

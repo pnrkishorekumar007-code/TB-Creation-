@@ -57,21 +57,14 @@ app.set('trust proxy', 1);
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 // When CLIENT_URL is unset, send no CORS headers at all (fail closed) instead of
 // falling back to the package default `*`. Same-origin requests never need CORS.
-// Origins are allow-listed exactly (comma-separated CLIENT_URLs are allowed);
-// in local development any localhost/127.0.0.1 port is accepted too, so the
-// frontend running on an alternate port (npm run dev picked 3001) still works.
-const allowedOrigins = (process.env.CLIENT_URL || '')
-  .split(',')
-  .map((s) => s.trim())
-  .filter(Boolean);
-const isLocalDev = process.env.NODE_ENV !== 'production';
-const originAllowed = (origin) =>
-  allowedOrigins.includes(origin) ||
-  (isLocalDev && /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin));
+// Origins are allow-listed exactly: a callback that returns false emits no
+// Access-Control-Allow-Origin header, so browsers refuse to share responses
+// with any origin other than the configured frontend.
+const allowedOrigins = process.env.CLIENT_URL ? new Set([process.env.CLIENT_URL]) : new Set();
 app.use(cors({
   origin: (origin, cb) => {
     if (!origin) return cb(null, true); // same-origin / non-browser client
-    cb(null, originAllowed(origin));
+    cb(null, allowedOrigins.has(origin));
   },
   credentials: true,
 }));
@@ -103,12 +96,16 @@ const generalLimiter = rateLimit({
 });
 app.use('/api', generalLimiter);
 
-// Tighter limiter specifically for auth endpoints — these are the ones brute-force attacks target.
+// Tighter limiter for the credential endpoints (login, signup, password reset) —
+// these are the ones brute-force attacks target. /me and /logout are session
+// checks the site calls on every page load, so they must NOT consume this
+// budget or ordinary browsing would lock real users out of logging in.
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 20,
+  max: 30,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => req.path === '/me' || req.path === '/logout',
   message: { message: 'Too many attempts. Please wait a while before trying again.' },
 });
 app.use('/api/auth', authLimiter);
@@ -143,6 +140,13 @@ app.get('/api/health', (req, res) => {
     message: 'TB Creation API Running',
     db: dbState === 1 ? 'connected' : dbState === 2 ? 'connecting' : 'disconnected',
   });
+});
+
+// Database gate: answer immediately with a clear 503 while Mongo is down
+// instead of letting every query sit in Mongoose's buffer and time out.
+app.use('/api', (req, res, next) => {
+  if (mongoose.connection.readyState === 1) return next();
+  return res.status(503).json({ message: 'Database unavailable. Start MongoDB or set MONGO_URI.' });
 });
 
 app.use('/api/auth', authRoutes);

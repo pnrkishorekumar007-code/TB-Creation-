@@ -14,8 +14,8 @@ export default function BookmarksPage() {
 
   useEffect(() => {
     if (!user) return;
-    api.get('/bookmarks/mine').then((res) => setBookmarks(res.data));
-    api.get('/history/continue').then((res) => setHistory(res.data));
+    api.get('/bookmarks/mine').then((res) => setBookmarks(res.data)).catch(() => {});
+    api.get('/history/continue').then((res) => setHistory(res.data)).catch(() => {});
   }, [user]);
 
   if (loading) return null;
@@ -51,7 +51,7 @@ export default function BookmarksPage() {
         <p className="text-muted text-sm mb-8">No bookmarked comics yet.</p>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-4 mb-10">
-          {comicBookmarks.map((b, i) => <ComicCard key={b._id} comic={b.comic} priority={i < 6} />)}
+          {comicBookmarks.map((b) => <ComicCard key={b._id} comic={b.comic} />)}
         </div>
       )}
 

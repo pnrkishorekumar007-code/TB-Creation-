@@ -1,5 +1,6 @@
-@import 'tailwindcss';
-@config '../tailwind.config.js';
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 /* =====================================================================
    TB Creation design system — "Manga Magazine"
@@ -88,14 +89,9 @@ body {
   color: rgb(var(--paper));
 }
 
-/* Horizontal overflow guard for page content only. Deliberately NOT on
-   html/body: overflow on the root/body breaks position:sticky (the header),
-   while this still clips rotated/full-bleed strips inside the main column. */
-#main {
-  overflow-x: clip;
-}
-
 body {
+  overflow-x: hidden; /* fallback for older browsers */
+  overflow-x: clip; /* never create a sideways page scrollbar */
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }

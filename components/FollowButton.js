@@ -13,7 +13,7 @@ export default function FollowButton({ authorId }) {
 
   useEffect(() => {
     if (!user || user.id === authorId) return;
-    api.get(`/follows/status/${authorId}`).then((res) => setFollowing(res.data.following));
+    api.get(`/follows/status/${authorId}`).then((res) => setFollowing(res.data.following)).catch(() => {});
   }, [user, authorId]);
 
   if (user?.id === authorId) return null;

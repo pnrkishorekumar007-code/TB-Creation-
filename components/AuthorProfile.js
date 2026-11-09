@@ -63,7 +63,7 @@ export default function AuthorProfile({ data }) {
           <p className="text-muted text-sm">No comics published yet.</p>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-4">
-            {comics.map((c, i) => <ComicCard key={c._id} comic={c} priority={i < 6} />)}
+            {comics.map((c) => <ComicCard key={c._id} comic={c} />)}
           </div>
         )}
       </div>

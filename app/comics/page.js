@@ -114,7 +114,7 @@ export default function ComicsPage() {
       </div>
 
       {/* Genre chips */}
-      <div className="flex gap-2 overflow-x-auto pb-2 mb-8 scrollbar-thin -mx-1 px-1" role="group" aria-label="Filter by genre">
+      <div className="flex flex-wrap gap-2 mb-8" role="group" aria-label="Filter by genre">
         {GENRES.map((g) => {
           const active = genre === g;
           return (
@@ -125,7 +125,7 @@ export default function ComicsPage() {
                 setGenre(g);
                 setPage(1);
               }}
-              className={`shrink-0 px-4 py-1.5 rounded-full text-sm border transition ${
+              className={`px-4 py-1.5 rounded-full text-sm border transition ${
                 active
                   ? 'bg-accent text-ink font-semibold border-accent'
                   : 'bg-panel panel-border text-muted hover:text-paper hover:border-accent/60'
@@ -176,8 +176,8 @@ export default function ComicsPage() {
         <>
           <p className="text-xs text-muted mb-4">{total} series</p>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-5">
-            {comics.map((c, i) => (
-              <ComicCard key={c._id} comic={c} priority={i < 5} />
+            {comics.map((c) => (
+              <ComicCard key={c._id} comic={c} />
             ))}
           </div>
 

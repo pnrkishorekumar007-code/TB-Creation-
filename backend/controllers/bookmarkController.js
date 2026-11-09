@@ -45,8 +45,8 @@ const toggleBookmark = async (req, res) => {
 const getMyBookmarks = async (req, res) => {
   try {
     const bookmarks = await Bookmark.find({ user: req.user._id })
-      .populate({ path: 'comic', populate: { path: 'author', select: 'name' } })
-      .populate({ path: 'script', populate: { path: 'author', select: 'name' } })
+      .populate('comic')
+      .populate('script')
       .sort({ createdAt: -1 });
     res.json(bookmarks);
   } catch (err) {

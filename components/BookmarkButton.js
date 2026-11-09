@@ -29,6 +29,7 @@ export default function BookmarkButton({ comicId, scriptId, initialBookmarked = 
     <button
       onClick={toggle}
       disabled={busy}
+      aria-pressed={bookmarked}
       className={`px-4 py-2 rounded text-sm font-semibold border transition ${
         bookmarked ? 'bg-accent text-ink border-accent' : 'border-border/20 text-paper hover:border-accent'
       }`}
