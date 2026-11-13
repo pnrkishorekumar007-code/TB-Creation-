@@ -142,14 +142,22 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Database gate: while Mongo is connecting, wait briefly (serverless cold
-// start) so the first request succeeds; hard-fail only when truly down.
+// Database gate: on serverless cold starts the first Mongo connect can fail
+// transiently, and without a retry that instance stays dead forever. Try to
+// (re)connect before answering 503.
 app.use('/api', async (req, res, next) => {
-  if (mongoose.connection.readyState === 1) return next();
-  if (mongoose.connection.readyState === 2) {
+  const conn = mongoose.connection;
+  if (conn.readyState === 1) return next();
+  if (conn.readyState === 0 && process.env.MONGO_URI) {
+    try {
+      await mongoose.connect(process.env.MONGO_URI, { serverSelectionTimeoutMS: 15000 });
+      return next();
+    } catch (_) { /* fall through to 503 */ }
+  }
+  if (conn.readyState === 2) {
     const connected = await new Promise((resolve) => {
       const t = setTimeout(() => resolve(false), 12000);
-      mongoose.connection.once('connected', () => { clearTimeout(t); resolve(true); });
+      conn.once('connected', () => { clearTimeout(t); resolve(true); });
     });
     if (connected) return next();
   }
