@@ -14,13 +14,20 @@ const securityHeaders = [
 // (React renders it), so the CSP still meaningfully restricts image, frame,
 // connect, object, and form targets. Applied only to production builds because
 // local dev needs HMR websockets and eval-based tooling.
+// API origin for CSP connect-src/img-src: derived from the deployed API URL
+// so the frontend may fetch comics and media from a different host (Render).
+const apiOrigin = (() => {
+  try { return process.env.NEXT_PUBLIC_API_URL ? new URL(process.env.NEXT_PUBLIC_API_URL).origin : ''; }
+  catch (_) { return ''; }
+})();
+
 const contentSecurityPolicy = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline'",
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob:",
+  `img-src 'self' data: blob: ${apiOrigin}`.trim(),
   "font-src 'self' data:",
-  "connect-src 'self'",
+  `connect-src 'self' ${apiOrigin}`.trim(),
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",
@@ -35,6 +42,9 @@ const nextConfig = {
       { protocol: 'http', hostname: 'localhost' },
       { protocol: 'http', hostname: '127.0.0.1' },
       { protocol: 'https', hostname: 'tb-creation.vercel.app' },
+      ...(apiOrigin
+        ? [{ protocol: new URL(apiOrigin).protocol.replace(':', ''), hostname: new URL(apiOrigin).hostname }]
+        : []),
     ],
   },
   async headers() {
