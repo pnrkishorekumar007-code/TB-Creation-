@@ -10,7 +10,9 @@ const signToken = (id) =>
 const TOKEN_COOKIE = 'tb_token';
 const TOKEN_COOKIE_OPTIONS = {
   httpOnly: true,
-  sameSite: 'lax',
+  // 'none' lets the cookie work cross-site (Vercel frontend -> Render API);
+  // 'lax' keeps local http://localhost dev working, where 'none' is rejected.
+  sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
   secure: process.env.NODE_ENV === 'production',
   maxAge: 30 * 24 * 60 * 60 * 1000,
   path: '/',
