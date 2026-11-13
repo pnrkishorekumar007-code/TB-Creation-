@@ -142,10 +142,17 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Database gate: answer immediately with a clear 503 while Mongo is down
-// instead of letting every query sit in Mongoose's buffer and time out.
-app.use('/api', (req, res, next) => {
+// Database gate: while Mongo is connecting, wait briefly (serverless cold
+// start) so the first request succeeds; hard-fail only when truly down.
+app.use('/api', async (req, res, next) => {
   if (mongoose.connection.readyState === 1) return next();
+  if (mongoose.connection.readyState === 2) {
+    const connected = await new Promise((resolve) => {
+      const t = setTimeout(() => resolve(false), 12000);
+      mongoose.connection.once('connected', () => { clearTimeout(t); resolve(true); });
+    });
+    if (connected) return next();
+  }
   return res.status(503).json({ message: 'Database unavailable. Start MongoDB or set MONGO_URI.' });
 });
 
