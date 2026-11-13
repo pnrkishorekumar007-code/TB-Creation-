@@ -8,7 +8,7 @@ const connectDB = async () => {
   try {
     // Fail fast and never queue queries against a dead connection: without
     // these, every request waits 10s in Mongoose's buffer and then throws.
-    await mongoose.connect(process.env.MONGO_URI, { serverSelectionTimeoutMS: 5000 });
+    await mongoose.connect(process.env.MONGO_URI, { serverSelectionTimeoutMS: 15000 });
     // eslint-disable-next-line no-console
     console.log('MongoDB connected');
   } catch (err) {
