@@ -46,6 +46,7 @@ function SignupForm() {
           placeholder="Full name"
           value={form.name}
           onChange={(e) => setForm({ ...form, name: e.target.value })}
+          suppressHydrationWarning
           className="bg-panel panel-border rounded-md px-4 py-3 text-sm outline-none focus:border-accent transition"
         />
         <input
@@ -54,6 +55,7 @@ function SignupForm() {
           placeholder="Email"
           value={form.email}
           onChange={(e) => setForm({ ...form, email: e.target.value })}
+          suppressHydrationWarning
           className="bg-panel panel-border rounded-md px-4 py-3 text-sm outline-none focus:border-accent transition"
         />
         <input
@@ -64,6 +66,7 @@ function SignupForm() {
           autoComplete="new-password"
           value={form.password}
           onChange={(e) => setForm({ ...form, password: e.target.value })}
+          suppressHydrationWarning
           className="bg-panel panel-border rounded-md px-4 py-3 text-sm outline-none focus:border-accent transition"
         />
 
@@ -73,6 +76,7 @@ function SignupForm() {
               type="button"
               key={opt.value}
               onClick={() => setForm({ ...form, role: opt.value })}
+              suppressHydrationWarning
               className={`text-left rounded-md border px-3.5 py-3 transition ${
                 form.role === opt.value
                   ? 'border-accent bg-accent/5'

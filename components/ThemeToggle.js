@@ -9,6 +9,7 @@ export default function ThemeToggle() {
     <button
       type="button"
       onClick={toggle}
+      suppressHydrationWarning
       aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
       title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
       className="relative p-2 rounded-md text-muted hover:text-paper transition"

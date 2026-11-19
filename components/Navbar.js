@@ -40,7 +40,7 @@ export default function Navbar() {
   }, [pathname, closeMenu]);
 
   useEffect(() => {
-    if (menuOpen) {
+    if (menuOpen && typeof document !== 'undefined') {
       document.body.style.overflow = 'hidden';
       const onKey = (e) => {
         if (e.key === 'Escape') setMenuOpen(false);

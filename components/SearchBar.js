@@ -55,12 +55,14 @@ export default function SearchBar({ variant = 'desktop', autoFocus = false }) {
       }
       if (ref.current && !ref.current.contains(e.target)) setOpen(false);
     };
-    document.addEventListener('keydown', onDown);
-    document.addEventListener('mousedown', onDown);
-    return () => {
-      document.removeEventListener('keydown', onDown);
-      document.removeEventListener('mousedown', onDown);
-    };
+    if (typeof document !== 'undefined') {
+      document.addEventListener('keydown', onDown);
+      document.addEventListener('mousedown', onDown);
+      return () => {
+        document.removeEventListener('keydown', onDown);
+        document.removeEventListener('mousedown', onDown);
+      };
+    }
   }, [query, router]);
 
   const total =

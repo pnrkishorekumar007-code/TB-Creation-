@@ -27,10 +27,13 @@ export default function ReaderPage() {
   }, [id, chapter]);
 
   useEffect(() => {
+    // Only run client-side effects
+    if (typeof window === 'undefined') return;
+    
     const onScroll = () => {
-      const doc = document.documentElement;
-      const max = doc.scrollHeight - window.innerHeight;
-      setProgress(max > 0 ? Math.min(1, window.scrollY / max) : 0);
+      const doc = document?.documentElement;
+      const max = doc?.scrollHeight - window?.innerHeight;
+      setProgress(max > 0 ? Math.min(1, window?.scrollY / max) : 0);
     };
     window.addEventListener('scroll', onScroll, { passive: true });
     onScroll();
@@ -39,26 +42,29 @@ export default function ReaderPage() {
   }, [chapter]);
 
   useEffect(() => {
+    // Only run client-side effects
+    if (typeof window === 'undefined' || typeof localStorage === 'undefined') return;
+    
     const key = `tb-read:${id}:${chapter}`;
     if (!chapterData) return undefined;
     if (chapterData.locked) return undefined;
     const restore = () => {
       const saved = Number(localStorage.getItem(key)) || 0;
       if (saved > 0 && saved < 0.98) {
-        window.scrollTo(0, saved * document.documentElement.scrollHeight);
+        window?.scrollTo(0, saved * (document?.documentElement?.scrollHeight || 0));
       }
     };
     const save = () => {
-      const doc = document.documentElement;
-      const max = doc.scrollHeight - window.innerHeight;
-      if (max > 0) localStorage.setItem(key, String(Math.min(1, window.scrollY / max)));
+      const doc = document?.documentElement;
+      const max = doc?.scrollHeight - window?.innerHeight;
+      if (max > 0) localStorage?.setItem(key, String(Math.min(1, window?.scrollY / max)));
     };
     const t = setTimeout(restore, 60);
-    window.addEventListener('beforeunload', save);
+    window?.addEventListener('beforeunload', save);
     return () => {
       clearTimeout(t);
       save();
-      window.removeEventListener('beforeunload', save);
+      window?.removeEventListener('beforeunload', save);
     };
   }, [chapterData, id, chapter]);
 
@@ -69,14 +75,17 @@ export default function ReaderPage() {
   }, [user, chapterData, id, chapter]);
 
   useEffect(() => {
+    // Only run client-side effects
+    if (typeof document === 'undefined') return;
+    
     const onKey = (e) => {
       if (!data || !chapterData) return;
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
       if (e.key === 'ArrowLeft') goTo(data.chapters[data.chapters.indexOf(chapterData) - 1]);
       if (e.key === 'ArrowRight') goTo(data.chapters[data.chapters.indexOf(chapterData) + 1]);
     };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
+    document?.addEventListener('keydown', onKey);
+    return () => document?.removeEventListener('keydown', onKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data, chapterData]);
 

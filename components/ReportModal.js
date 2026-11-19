@@ -20,7 +20,7 @@ export default function ReportModal({ open, onClose, targetType, targetId }) {
   const textareaRef = useRef(null);
 
   useEffect(() => {
-    if (!open) return undefined;
+    if (!open || typeof document === 'undefined') return undefined;
     setDone(false);
     setError('');
     setDetails('');

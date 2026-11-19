@@ -39,6 +39,7 @@ export default function LoginPage() {
           placeholder="Email"
           value={form.email}
           onChange={(e) => setForm({ ...form, email: e.target.value })}
+          suppressHydrationWarning
           className="bg-panel panel-border rounded-md px-4 py-3 text-sm outline-none focus:border-accent transition"
         />
         <input
@@ -47,6 +48,7 @@ export default function LoginPage() {
           placeholder="Password"
           value={form.password}
           onChange={(e) => setForm({ ...form, password: e.target.value })}
+          suppressHydrationWarning
           autoComplete="current-password"
           className="bg-panel panel-border rounded-md px-4 py-3 text-sm outline-none focus:border-accent transition"
         />
@@ -54,6 +56,7 @@ export default function LoginPage() {
         <button
           type="submit"
           disabled={submitting}
+          suppressHydrationWarning
           className="px-5 py-3 bg-accent text-ink font-bold rounded-md glow-btn transition disabled:opacity-50"
         >
           {submitting ? 'Logging in...' : 'Log In'}
