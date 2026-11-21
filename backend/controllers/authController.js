@@ -76,6 +76,7 @@ const login = async (req, res) => {
 
     const match = await bcrypt.compare(password, user.password);
     if (!match) return res.status(401).json({ message: 'Invalid credentials' });
+    if (user.isBanned) return res.status(403).json({ message: 'This account has been suspended.' });
 
     const token = signToken(user._id);
     setTokenCookie(res, token);

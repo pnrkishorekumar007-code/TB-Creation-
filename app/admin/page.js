@@ -9,11 +9,13 @@ export default function AdminPage() {
   const [pendingComics, setPendingComics] = useState([]);
   const [pendingScripts, setPendingScripts] = useState([]);
   const [reports, setReports] = useState([]);
+  const [users, setUsers] = useState([]);
 
   const load = () => {
     api.get('/admin/comics/pending').then((res) => setPendingComics(res.data)).catch(() => {});
     api.get('/admin/scripts/pending').then((res) => setPendingScripts(res.data)).catch(() => {});
     api.get('/reports/open').then((res) => setReports(res.data)).catch(() => {});
+    api.get('/admin/users').then((res) => setUsers(res.data)).catch(() => {});
   };
 
   useEffect(() => {
@@ -32,6 +34,16 @@ export default function AdminPage() {
 
   const resolveReport = async (id, status) => {
     await api.put(`/reports/${id}/resolve`, { status });
+    load();
+  };
+
+  const setRole = async (id, role) => {
+    await api.put(`/admin/users/${id}`, { role });
+    load();
+  };
+
+  const toggleBan = async (id, isBanned) => {
+    await api.put(`/admin/users/${id}`, { isBanned });
     load();
   };
 
@@ -86,6 +98,46 @@ export default function AdminPage() {
                 </button>
                 <button onClick={() => reviewComic(c._id, 'rejected')} className="px-3 py-1 border border-border/20 rounded text-xs">
                   Reject
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <h2 className="font-display text-xl mb-3">Users</h2>
+      {users.length === 0 ? (
+        <p className="text-muted text-sm mb-8">No users.</p>
+      ) : (
+        <div className="flex flex-col gap-2 mb-8">
+          {users.map((u) => (
+            <div key={u._id} className="row-card rounded px-4 py-3 flex justify-between items-center text-sm gap-3">
+              <div>
+                <p>
+                  {u.name}
+                  {u.isBanned && <span className="ml-2 text-xs text-accent uppercase">banned</span>}
+                </p>
+                <p className="text-xs text-muted">{u.email}</p>
+              </div>
+              <div className="flex gap-2 items-center">
+                <select
+                  value={u.role}
+                  disabled={u._id === user.id}
+                  onChange={(e) => setRole(u._id, e.target.value)}
+                  className="bg-transparent border border-border/20 rounded px-2 py-1 text-xs"
+                >
+                  <option value="reader">reader</option>
+                  <option value="author">author</option>
+                  <option value="admin">admin</option>
+                </select>
+                <button
+                  disabled={u._id === user.id}
+                  onClick={() => toggleBan(u._id, !u.isBanned)}
+                  className={u.isBanned
+                    ? 'px-3 py-1 border border-border/20 rounded text-xs'
+                    : 'px-3 py-1 bg-accent text-ink rounded text-xs font-semibold'}
+                >
+                  {u.isBanned ? 'Unban' : 'Ban'}
                 </button>
               </div>
             </div>

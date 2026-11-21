@@ -23,6 +23,9 @@ const protect = async (req, res, next) => {
     if (!req.user) {
       return res.status(401).json({ message: 'User no longer exists' });
     }
+    if (req.user.isBanned) {
+      return res.status(403).json({ message: 'This account has been suspended.' });
+    }
     next();
   } catch (err) {
     return res.status(401).json({ message: 'Not authorized, token failed' });
@@ -41,7 +44,9 @@ const optionalAuth = async (req, res, next) => {
   if (token) {
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      req.user = await User.findById(decoded.id).select('-password');
+      const user = await User.findById(decoded.id).select('-password');
+      // Banned users are treated as guests so the UI shows them logged out.
+      req.user = user && !user.isBanned ? user : null;
     } catch {
       req.user = null;
     }

@@ -1,10 +1,61 @@
 const { serverError } = require('../utils/httpError');
 const Comic = require('../models/Comic');
 const Script = require('../models/Script');
+const User = require('../models/User');
 const { publishFiles } = require('../utils/mediaAccess');
 const { signPayloadMedia } = require('../utils/signMedia');
 
 const REVIEW_STATUSES = ['approved', 'rejected'];
+const USER_ROLES = ['reader', 'author', 'admin'];
+
+const getUsers = async (req, res) => {
+  try {
+    const users = await User.find()
+      .select('name email role isBanned createdAt')
+      .sort({ createdAt: -1 });
+    res.json(users);
+  } catch (err) {
+    serverError(res, err);
+  }
+};
+
+const updateUser = async (req, res) => {
+  try {
+    const { role, isBanned } = req.body;
+    const user = await User.findById(req.params.id).select('-password');
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    // An admin must not lock themselves out of the panel.
+    if (String(user._id) === String(req.user._id)) {
+      if (role !== undefined && role !== 'admin') {
+        return res.status(400).json({ message: 'You cannot remove your own admin role' });
+      }
+      if (isBanned === true) {
+        return res.status(400).json({ message: 'You cannot ban yourself' });
+      }
+    }
+
+    if (role !== undefined) {
+      if (!USER_ROLES.includes(role)) return res.status(400).json({ message: 'Invalid role' });
+      user.role = role;
+    }
+    if (isBanned !== undefined) {
+      if (typeof isBanned !== 'boolean') return res.status(400).json({ message: 'isBanned must be a boolean' });
+      user.isBanned = isBanned;
+    }
+
+    await user.save();
+    res.json({
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      isBanned: user.isBanned,
+    });
+  } catch (err) {
+    serverError(res, err);
+  }
+};
 
 const getPendingComics = async (req, res) => {
   try {
@@ -60,4 +111,4 @@ const reviewScript = async (req, res) => {
   }
 };
 
-module.exports = { getPendingComics, reviewComic, getPendingScripts, reviewScript };
+module.exports = { getPendingComics, reviewComic, getPendingScripts, reviewScript, getUsers, updateUser };
