@@ -16,6 +16,7 @@ export async function generateMetadata({ params }) {
     title: comic.title,
     description:
       comic.description || `${comic.title} — an original comic series on TB Creation.`,
+    alternates: { canonical: `/comics/${comic._id}` },
     openGraph: {
       title: comic.title,
       description: comic.description,

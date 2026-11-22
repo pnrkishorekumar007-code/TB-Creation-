@@ -13,6 +13,7 @@ export async function generateMetadata({ params }) {
   return {
     title: data.title,
     description: data.synopsis || `Read the script for "${data.title}" on TB Creation.`,
+    alternates: { canonical: `/scripts/${data._id}` },
     openGraph: {
       title: data.title,
       description: data.synopsis,

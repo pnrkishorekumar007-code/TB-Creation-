@@ -86,7 +86,6 @@ tb-creation/
 ```
 
 ## Next steps (v6 ideas, not yet built)
-- **Per-page SEO metadata** — comic and script detail pages are currently client components (`'use client'`) for interactivity, so they can't export Next.js `generateMetadata`. To add real per-comic titles/descriptions for search engines and link previews, split each into a server component wrapper (handles `generateMetadata` + initial fetch) with a client child (handles the interactive bits — likes, comments, etc.)
 - Author analytics dashboard (views over time, chart of most-read chapters)
 - Tipping/donations, premium chapters
 - Related comics recommendations
