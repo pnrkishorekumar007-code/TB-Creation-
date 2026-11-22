@@ -147,6 +147,7 @@ function SignupForm() {
         <button
           type="submit"
           disabled={submitting}
+          suppressHydrationWarning
           className="px-5 py-3 bg-accent text-ink font-bold rounded-md glow-btn transition disabled:opacity-50"
         >
           {submitting ? 'Creating account...' : 'Create Account'}

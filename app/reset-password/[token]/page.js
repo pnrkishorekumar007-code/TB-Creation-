@@ -48,6 +48,7 @@ export default function ResetPasswordPage() {
           <form onSubmit={submit} className="flex flex-col gap-4">
             <input
               required
+              suppressHydrationWarning
               type="password"
               placeholder="New password (min 6 characters)"
               minLength={6}
@@ -58,6 +59,7 @@ export default function ResetPasswordPage() {
             />
             <input
               required
+              suppressHydrationWarning
               type="password"
               placeholder="Confirm new password"
               value={confirm}
@@ -68,6 +70,7 @@ export default function ResetPasswordPage() {
             <button
               type="submit"
               disabled={submitting}
+              suppressHydrationWarning
               className="px-5 py-3 bg-accent text-ink font-bold rounded-md glow-btn transition disabled:opacity-50"
             >
               {submitting ? 'Saving...' : 'Reset Password'}

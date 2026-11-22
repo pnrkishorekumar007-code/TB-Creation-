@@ -49,11 +49,13 @@ export default function ForgotPasswordPage() {
             placeholder="Email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            suppressHydrationWarning
             className="bg-panel panel-border rounded-md px-4 py-3 text-sm outline-none focus:border-accent transition"
           />
           <button
             type="submit"
             disabled={status === 'sending'}
+            suppressHydrationWarning
             className="px-5 py-3 bg-accent text-ink font-bold rounded-md glow-btn transition disabled:opacity-50"
           >
             {status === 'sending' ? 'Sending...' : 'Send Reset Link'}
