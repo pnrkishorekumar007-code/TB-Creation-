@@ -1,4 +1,5 @@
 const { serverError } = require('../utils/httpError');
+const { sendMail } = require('../utils/mailer');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
@@ -118,17 +119,30 @@ const forgotPassword = async (req, res) => {
 
     const resetUrl = `${process.env.CLIENT_URL || 'http://localhost:3000'}/reset-password/${rawToken}`;
 
-    // No email service is configured yet — log the link only outside
-    // production (server logs are a sensitive place for reset credentials).
-    // Wire this to a real provider (SendGrid, Postmark, SES, etc.) before
-    // going to production.
-    if (process.env.NODE_ENV !== 'production') {
+    // Sent before responding (not fire-and-forget): on Vercel an unawaited send
+    // is killed when the response returns. A delivery failure is logged but
+    // never surfaced — only registered emails reach this line, so any different
+    // response would reveal which accounts exist.
+    const sent = await sendMail({
+      to: user.email,
+      subject: 'Reset your TB Creation password',
+      text: `Someone requested a password reset for this account.\n\nIf it was you, open this link within 1 hour:\n${resetUrl}\n\nIf you didn't request it, ignore this email.`,
+      html: `<p>Someone requested a password reset for this account.</p><p>If it was you, open this link within 1 hour:</p><p><a href="${resetUrl}">Reset your password</a></p><p>If you didn't request it, ignore this email.</p>`,
+    }).catch((err) => {
+      // eslint-disable-next-line no-console
+      console.error('[mailer] password reset delivery failed:', err.message);
+      return false;
+    });
+
+    // No SMTP configured (or the send failed): log the link only outside
+    // production — server logs are a sensitive place for reset credentials.
+    if (!sent && process.env.NODE_ENV !== 'production') {
       console.log(`Password reset requested for ${user.email}: ${resetUrl}`);
     }
 
     res.json({
       message: 'If that email is registered, a reset link has been sent.',
-      devResetUrl: process.env.NODE_ENV === 'production' ? undefined : resetUrl,
+      devResetUrl: sent || process.env.NODE_ENV === 'production' ? undefined : resetUrl,
     });
   } catch (err) {
     serverError(res, err);

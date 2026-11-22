@@ -56,6 +56,8 @@ Runs on `http://localhost:5000`.
 
 You need MongoDB running — either install it locally, or create a free cluster at MongoDB Atlas and paste its connection string into `MONGO_URI`.
 
+Password reset emails need SMTP credentials (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, optional `MAIL_FROM`) — see `.env.example` for Gmail and Brevo examples. Without them, the reset link is printed to the backend console and returned in the API response instead of emailed.
+
 ### 2. Frontend
 ```bash
 npm install
@@ -84,7 +86,6 @@ tb-creation/
 ```
 
 ## Next steps (v6 ideas, not yet built)
-- **Wire up a real email service** (SendGrid, Postmark, or AWS SES) — password reset currently logs the reset link to the server console instead of emailing it, since no email provider is configured. Look for the comment in `backend/controllers/authController.js` (`forgotPassword` function) — swap the `console.log` for an actual send call.
 - **Per-page SEO metadata** — comic and script detail pages are currently client components (`'use client'`) for interactivity, so they can't export Next.js `generateMetadata`. To add real per-comic titles/descriptions for search engines and link previews, split each into a server component wrapper (handles `generateMetadata` + initial fetch) with a client child (handles the interactive bits — likes, comments, etc.)
 - Author analytics dashboard (views over time, chart of most-read chapters)
 - Tipping/donations, premium chapters

@@ -18,6 +18,12 @@ if (process.env.NODE_ENV === 'production') {
     console.error('CONFIG ERROR: NODE_ENV=production requires a real JWT_SECRET (>= 32 chars) in the Vercel environment.');
     configError = 'Server is awaiting configuration (JWT_SECRET missing or weak).';
   }
+  // Not fatal — the site runs fine without mail — but password reset links
+  // would silently never arrive, so surface it at boot instead of at 3am.
+  if (!require('./utils/mailer').isMailConfigured()) {
+    // eslint-disable-next-line no-console
+    console.error('CONFIG WARNING: SMTP_HOST/SMTP_USER/SMTP_PASS are not set — password reset emails will not be sent.');
+  }
   // MEDIA_SIGNING_SECRET falls back to JWT_SECRET, so it never weakens the
   // gate; it only exists so the media URL key can be rotated independently.
 }
