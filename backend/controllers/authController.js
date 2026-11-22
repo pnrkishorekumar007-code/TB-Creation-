@@ -36,6 +36,35 @@ const serializeUser = (user) => ({
   avatarUrl: user.avatarUrl,
 });
 
+const VERIFY_TTL_MS = 24 * 60 * 60 * 1000;
+
+// Stores a hashed, single-use token and emails the raw one. Returns the link
+// only when nothing was emailed outside production, so local testing works
+// without SMTP (same fallback as forgotPassword).
+const issueVerificationEmail = async (user) => {
+  const rawToken = crypto.randomBytes(32).toString('hex');
+  user.emailVerificationToken = crypto.createHash('sha256').update(rawToken).digest('hex');
+  user.emailVerificationExpires = Date.now() + VERIFY_TTL_MS;
+  await user.save();
+
+  const verifyUrl = `${process.env.CLIENT_URL || 'http://localhost:3000'}/verify-email/${rawToken}`;
+  const sent = await sendMail({
+    to: user.email,
+    subject: 'Verify your TB Creation email',
+    text: `Confirm this address to finish creating your TB Creation account. The link works for 24 hours:\n${verifyUrl}\n\nIf you didn't sign up, ignore this email.`,
+    html: `<p>Confirm this address to finish creating your TB Creation account. The link works for 24 hours:</p><p><a href="${verifyUrl}">Verify my email</a></p><p>If you didn't sign up, ignore this email.</p>`,
+  }).catch((err) => {
+    // eslint-disable-next-line no-console
+    console.error('[mailer] verification email failed:', err.message);
+    return false;
+  });
+
+  if (!sent && process.env.NODE_ENV !== 'production') {
+    console.log(`Email verification requested for ${user.email}: ${verifyUrl}`);
+  }
+  return sent || process.env.NODE_ENV === 'production' ? undefined : verifyUrl;
+};
+
 const signup = async (req, res) => {
   try {
     const { name, email, password, role } = req.body;
@@ -57,12 +86,15 @@ const signup = async (req, res) => {
     const allowedRole = role === 'author' ? 'author' : 'reader';
 
     const user = await User.create({ name, email: email.toLowerCase(), password: hashed, role: allowedRole });
-    const token = signToken(user._id);
-    setTokenCookie(res, token);
+
+    // No session yet: an unverified account must not be usable, otherwise a
+    // typo'd or non-existent address is already "logged in".
+    const devVerifyUrl = await issueVerificationEmail(user);
 
     res.status(201).json({
-      token,
-      user: serializeUser(user),
+      message: 'Account created. Check your inbox to verify your email, then log in.',
+      email: user.email,
+      devVerifyUrl,
     });
   } catch (err) {
     serverError(res, err);
@@ -78,6 +110,13 @@ const login = async (req, res) => {
     const match = await bcrypt.compare(password, user.password);
     if (!match) return res.status(401).json({ message: 'Invalid credentials' });
     if (user.isBanned) return res.status(403).json({ message: 'This account has been suspended.' });
+    if (!user.emailVerified) {
+      // `code` lets the UI offer "resend" without string-matching the message.
+      return res.status(403).json({
+        code: 'EMAIL_UNVERIFIED',
+        message: 'Please verify your email address first. Check your inbox for the link we sent.',
+      });
+    }
 
     const token = signToken(user._id);
     setTokenCookie(res, token);
@@ -172,6 +211,9 @@ const resetPassword = async (req, res) => {
     user.password = await bcrypt.hash(password, 10);
     user.resetPasswordToken = null;
     user.resetPasswordExpires = null;
+    // Following a reset link already proves inbox access, so don't leave the
+    // account stuck behind the verification wall afterwards.
+    user.emailVerified = true;
     await user.save();
 
     res.json({ message: 'Password updated. You can now log in.' });
@@ -180,4 +222,59 @@ const resetPassword = async (req, res) => {
   }
 };
 
-module.exports = { signup, login, me, logout, forgotPassword, resetPassword, serializeUser };
+const verifyEmail = async (req, res) => {
+  try {
+    const { token } = req.body;
+    if (!token) return res.status(400).json({ message: 'Verification token is required' });
+
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+    const user = await User.findOne({
+      emailVerificationToken: hashedToken,
+      emailVerificationExpires: { $gt: Date.now() },
+    });
+
+    if (!user) {
+      return res.status(400).json({ message: 'This verification link is invalid or has expired' });
+    }
+
+    user.emailVerified = true;
+    user.emailVerificationToken = null;
+    user.emailVerificationExpires = null;
+    await user.save();
+
+    res.json({ message: 'Email verified. You can now log in.' });
+  } catch (err) {
+    serverError(res, err);
+  }
+};
+
+const resendVerification = async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ message: 'Email is required' });
+
+    const user = await User.findOne({ email: String(email).toLowerCase() });
+    // Same answer whether the account is missing, already verified, or real,
+    // so this cannot be used to probe which emails are registered.
+    const devVerifyUrl = user && !user.emailVerified ? await issueVerificationEmail(user) : undefined;
+
+    res.json({
+      message: 'If that email needs verification, a new link has been sent.',
+      devVerifyUrl,
+    });
+  } catch (err) {
+    serverError(res, err);
+  }
+};
+
+module.exports = {
+  signup,
+  login,
+  me,
+  logout,
+  forgotPassword,
+  resetPassword,
+  verifyEmail,
+  resendVerification,
+  serializeUser,
+};

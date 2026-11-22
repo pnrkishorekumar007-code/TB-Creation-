@@ -14,7 +14,7 @@ A full-stack manga/comic publishing platform. Authors upload manga scripts and c
 - **Report modal** — reporting a comic or comment now opens a styled in-theme modal instead of the browser's native `prompt()`/`alert()` popups
 - **Branded cover placeholders** — comics without a cover image show a styled gradient card with the title instead of plain "No cover" text
 - **Loading and error states** — a themed spinner while pages load, and a styled error screen with a "Try Again" button instead of Next.js's default blank error page
-- Signup/login with role selection (reader or author), with real email/password validation
+- Signup/login with role selection (reader or author), with real email/password validation. New accounts stay locked until the emailed verification link is clicked, so fake or typo'd addresses can't log in
 - **Password reset** — forgot-password flow with a time-limited, hashed reset token (1 hour expiry)
 - **Security hardening** — Helmet security headers, rate limiting on all API routes (300/15min) and a tighter limit on auth routes specifically (20/15min) to slow down brute-force attempts
 - **Report/flag content** — readers can report a comic or a comment with a reason; admins review an Open Reports queue and mark reviewed/dismissed
@@ -56,7 +56,7 @@ Runs on `http://localhost:5000`.
 
 You need MongoDB running — either install it locally, or create a free cluster at MongoDB Atlas and paste its connection string into `MONGO_URI`.
 
-Password reset emails need SMTP credentials (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, optional `MAIL_FROM`) — see `.env.example` for Gmail and Brevo examples. Without them, the reset link is printed to the backend console and returned in the API response instead of emailed.
+Password reset and signup verification emails need SMTP credentials (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, optional `MAIL_FROM`) - see `.env.example` for Gmail and Brevo examples. Without them, the reset/verification link is printed to the backend console and returned in the API response instead of emailed.
 
 ### 2. Frontend
 ```bash

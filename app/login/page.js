@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import api from '../../lib/api';
 import { useAuth } from '../../lib/AuthContext';
 import AuthLayout from '../../components/AuthLayout';
 
@@ -12,18 +13,32 @@ export default function LoginPage() {
   const [form, setForm] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [unverified, setUnverified] = useState(false);
+  const [resent, setResent] = useState(false);
 
   const submit = async (e) => {
     e.preventDefault();
     setError('');
+    setUnverified(false);
+    setResent(false);
     setSubmitting(true);
     try {
       await login(form.email, form.password);
       router.push('/');
     } catch (err) {
       setError(err.response?.data?.message || err.message || 'Login failed');
+      setUnverified(err.response?.data?.code === 'EMAIL_UNVERIFIED');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const resend = async () => {
+    setResent(true);
+    try {
+      await api.post('/auth/resend-verification', { email: form.email });
+    } catch {
+      // The endpoint always answers the same way, so there is nothing to report.
     }
   };
 
@@ -53,6 +68,16 @@ export default function LoginPage() {
           className="bg-panel panel-border rounded-md px-4 py-3 text-sm outline-none focus:border-accent transition"
         />
         {error && <p className="text-sm text-danger">{error}</p>}
+        {unverified && (
+          <button
+            type="button"
+            onClick={resend}
+            disabled={resent}
+            className="text-sm text-accent hover:underline font-medium text-left disabled:opacity-50 disabled:no-underline"
+          >
+            {resent ? 'Sent — check your inbox again' : 'Resend verification email'}
+          </button>
+        )}
         <button
           type="submit"
           disabled={submitting}

@@ -22,7 +22,7 @@ if (process.env.NODE_ENV === 'production') {
   // would silently never arrive, so surface it at boot instead of at 3am.
   if (!require('./utils/mailer').isMailConfigured()) {
     // eslint-disable-next-line no-console
-    console.error('CONFIG WARNING: SMTP_HOST/SMTP_USER/SMTP_PASS are not set — password reset emails will not be sent.');
+    console.error('CONFIG WARNING: SMTP_HOST/SMTP_USER/SMTP_PASS are not set — password reset and email verification messages will not be sent.');
   }
   // MEDIA_SIGNING_SECRET falls back to JWT_SECRET, so it never weakens the
   // gate; it only exists so the media URL key can be rotated independently.

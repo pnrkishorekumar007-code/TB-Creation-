@@ -1,8 +1,9 @@
 'use client';
 
 import { Suspense, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import api from '../../lib/api';
 import { useAuth } from '../../lib/AuthContext';
 import AuthLayout from '../../components/AuthLayout';
 
@@ -13,27 +14,78 @@ const ROLE_OPTIONS = [
 
 function SignupForm() {
   const { signup } = useAuth();
-  const router = useRouter();
   const searchParams = useSearchParams();
   const initialRole = searchParams.get('role') === 'author' ? 'author' : 'reader';
 
   const [form, setForm] = useState({ name: '', email: '', password: '', role: initialRole });
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [sent, setSent] = useState(null);
+  const [resent, setResent] = useState(false);
 
   const submit = async (e) => {
     e.preventDefault();
     setError('');
     setSubmitting(true);
     try {
-      await signup(form.name, form.email, form.password, form.role);
-      router.push('/');
+      const data = await signup(form.name, form.email, form.password, form.role);
+      setSent({ email: data.email || form.email, devVerifyUrl: data.devVerifyUrl });
     } catch (err) {
       setError(err.response?.data?.message || err.message || 'Signup failed');
     } finally {
       setSubmitting(false);
     }
   };
+
+  const resend = async () => {
+    setResent(true);
+    try {
+      await api.post('/auth/resend-verification', { email: sent.email });
+    } catch {
+      // The endpoint always answers the same way, so there is nothing to report.
+    }
+  };
+
+  if (sent) {
+    return (
+      <AuthLayout variant="signup">
+        <h1 className="font-display text-3xl mb-1 uppercase">Check Your Inbox</h1>
+        <p className="text-sm text-muted mb-8">One more step before you can log in.</p>
+
+        <div className="static-card rounded-lg p-6">
+          <p className="text-sm">
+            We sent a verification link to <span className="text-accent">{sent.email}</span>. Click it,
+            then log in. The link works for 24 hours.
+          </p>
+          {sent.devVerifyUrl && (
+            <div className="mt-4 pt-4 border-t border-border/10">
+              <p className="text-xs text-muted mb-2">
+                Dev mode — no email service is configured, so here&apos;s your verification link directly:
+              </p>
+              <Link
+                href={sent.devVerifyUrl.replace(/^https?:\/\/[^/]+/, '')}
+                className="text-accent text-sm hover:underline break-all"
+              >
+                {sent.devVerifyUrl}
+              </Link>
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={resend}
+            disabled={resent}
+            className="mt-4 text-sm text-accent hover:underline font-medium disabled:opacity-50 disabled:no-underline"
+          >
+            {resent ? 'Sent — check your inbox again' : "Didn't get it? Resend the email"}
+          </button>
+        </div>
+
+        <p className="text-sm text-muted mt-5">
+          <Link href="/login" className="text-accent hover:underline font-medium">Back to log in</Link>
+        </p>
+      </AuthLayout>
+    );
+  }
 
   return (
     <AuthLayout variant="signup">

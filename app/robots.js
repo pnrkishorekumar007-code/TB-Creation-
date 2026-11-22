@@ -17,6 +17,7 @@ export default function robots() {
           '/signup',
           '/forgot-password',
           '/reset-password',
+          '/verify-email',
         ],
       },
     ],
